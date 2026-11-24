@@ -1,0 +1,92 @@
+name: Build Sarav
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HAS_UPLOAD_KEY: ${{ secrets.UPLOAD_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install and build web app
+        run: |
+          npm ci
+          npm run build
+          npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build APK (install directly on a phone)
+        working-directory: android
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk ../Sarav.apk
+
+      - name: Build Play Store bundle (only when the upload key secrets are set)
+        if: env.HAS_UPLOAD_KEY == 'true'
+        working-directory: android
+        env:
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+        run: |
+          echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          UPLOAD_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks" ./gradlew bundleRelease --no-daemon --stacktrace
+          cp app/build/outputs/bundle/release/app-release.aab ../Sarav-playstore.aab
+          rm -f "$RUNNER_TEMP/upload.jks"
+
+      - name: Keep files as build download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sarav-build
+          path: |
+            Sarav.apk
+            Sarav-playstore.aab
+          if-no-files-found: ignore
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Sarav 1.0.${{ github.run_number }}
+          body: |
+            Sarav.apk: install directly on an Android phone.
+            Sarav-playstore.aab (if present): upload this to Google Play Console.
+          files: |
+            Sarav.apk
+            Sarav-playstore.aab
+          fail_on_unmatched_files: false
+          make_latest: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  website:
+    needs: android
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

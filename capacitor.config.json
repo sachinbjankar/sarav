@@ -1,0 +1,6 @@
+{
+  "appId": "in.sachivapps.sarav",
+  "appName": "सराव",
+  "webDir": "dist",
+  "android": { "backgroundColor": "#F5F3EE" }
+}
