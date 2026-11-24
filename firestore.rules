@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// सराव: Firestore सुरक्षा नियम
+// players/{uid}: रँकिंगसाठी सार्वजनिक (नाव, जिल्हा, गुण). फक्त स्वतःचे खाते बदलता येते.
+//   गुण फसवणूक टाळण्यासाठी: एका वेळी कमाल १०० गुण (१० प्रश्न × १०), आणि दोन चाचण्यांमध्ये किमान ३० सेकंद.
+// users/{uid}: खासगी प्रगती. फक्त त्या व्यक्तीलाच दिसते.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // आठवडा क्रमांक (सोमवार ००:०० भारतीय वेळ). अ‍ॅपमधील weekIndex() शी जुळले पाहिजे.
+    function week() {
+      return math.floor((request.time.toMillis() + 19800000 - 345600000) / 604800000);
+    }
+    function validName(n) { return n is string && n.size() >= 2 && n.size() <= 30; }
+    function validDist(d) { return d is string && d.size() <= 30; }
+    function isMe(uid) { return request.auth != null && request.auth.uid == uid; }
+
+    function profileEdit() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['name', 'dist'])
+        && validName(d.name) && validDist(d.dist);
+    }
+
+    function scoreAdd() {
+      let d = request.resource.data;
+      let o = resource.data;
+      let e = d.lastExam;
+      let tK = 't_' + e;
+      let wK = 'w' + string(week()) + '_' + e;
+      let add = d.tot - o.tot;
+      return e in ['mpsc', 'police', 'itar']
+        && d.diff(o).affectedKeys().hasOnly([tK, wK, 'tot', 'tests', 'last', 'lastExam'])
+        && add is int && add >= 0 && add <= 100
+        && d.tests == o.tests + 1
+        && d.get(tK, 0) == o.get(tK, 0) + add
+        && d.get(wK, 0) == o.get(wK, 0) + add
+        && d.last == request.time
+        && request.time > o.last + duration.value(30, 's');
+    }
+
+    match /players/{uid} {
+      allow read: if true;
+      allow create: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['name', 'dist', 'tot', 'tests', 'last', 'lastExam'])
+        && validName(request.resource.data.name)
+        && validDist(request.resource.data.dist)
+        && request.resource.data.tot == 0
+        && request.resource.data.tests == 0
+        && request.resource.data.lastExam == ''
+        && request.resource.data.last == request.time;
+      allow update: if isMe(uid) && (profileEdit() || scoreAdd());
+      allow delete: if isMe(uid);
+    }
+
+    match /users/{uid} {
+      allow read, write: if isMe(uid);
+    }
+  }
+}

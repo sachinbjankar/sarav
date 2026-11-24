@@ -2,7 +2,13 @@
 
 A free Marathi quiz app for MPSC, Police Bharti and other state exams. It earns money from AdMob ads.
 
-**Features:** a daily quiz (10 new questions every day), practice by subject (8 subjects, 200 questions), a mixed test, practice of wrong answers, saved questions, a 45-second timer per question, a 50:50 lifeline (1 free per test, more unlocked by a rewarded ad), explanations, results with review, progress by subject, a daily streak, and score sharing. Everything is stored on the phone, so there is no server and no running cost.
+**Exam sections:** MPSC, पोलीस भरती and इतर भरती (Talathi, Gramsevak, ZP, health department). Each section has its own subjects, daily quiz and leaderboard. Users choose a section on first launch and can switch from the chip in the header.
+
+**Features:** a daily quiz per exam, practice by subject (225 questions in 9 base subjects; सामान्य ज्ञान and CSAT draw on several of them), a mixed test, practice of wrong answers, saved questions, a 45-second timer, a 50:50 lifeline, explanations, results with review, and score sharing.
+
+**Accounts (optional):** sign up with name, district, email and password. The test history, progress chart, subject accuracy and saved questions are kept online, so they move to a new phone. Users can delete their account in the app (Play Store requires this).
+
+**Ranking:** 10 points per correct answer in the daily quiz (first try), subject tests and mixed tests. Each exam shows the top 50 for this week (restarting Monday) and for all time, plus the user's own rank. The server accepts at most 100 points per test and one test every 30 seconds, which limits cheating.
 
 **Ads:**
 - A banner on the home, result, saved and progress screens. It never shows during questions.
@@ -17,6 +23,11 @@ Settings are in `src/config.js`.
 - GitHub Actions builds `Sarav.apk` on every push to `main` and attaches it to a Release. When the upload-key secrets are set, it also builds `Sarav-playstore.aab`. The privacy policy is published on GitHub Pages.
 
 ## One-time setup
+0. **Firebase (for accounts and ranking):** go to console.firebase.google.com and create a project named `sarav`, on the free Spark plan.
+   - Build → Authentication → Get started → turn on **Email/Password**.
+   - Build → Firestore Database → Create database (production mode, region `asia-south1` Mumbai). Then open **Rules**, paste in `firestore.rules`, and click Publish.
+   - Project settings → Your apps → Web (`</>`) → register the app, then copy the `firebaseConfig` values into `src/config.js`.
+   - Until this is done, accounts and ranking run in demo mode, on that one phone only.
 1. **GitHub:** push this folder to the `sarav` repository. Then go to Settings → Pages → Source: **GitHub Actions**.
 2. **Play Store bundle:** go to Settings → Secrets and variables → Actions → New repository secret, and add:
    - `UPLOAD_KEYSTORE_BASE64`: the contents of `UPLOAD_KEYSTORE_BASE64.txt`
@@ -32,4 +43,7 @@ Settings are in `src/config.js`.
 Edit `src/questions.js`. Put the correct answer **first** in each option list, because the app shuffles the options itself. Add new questions at the **end** of a subject's list, so that users' saved questions and progress stay linked to the right questions.
 
 ## Play Store listing
-The listing text and the 512 px icon are in `store/`. The privacy policy URL is `https://sachinbjankar.github.io/sarav/privacy.html`.
+The listing text and the 512 px icon are in `store/`. The privacy policy URL is `https://sachinbjankar.github.io/sarav/privacy.html`, and the account deletion URL is `https://sachinbjankar.github.io/sarav/delete-account.html`.
+
+## Free-plan limits
+The Firebase Spark plan allows 50,000 reads and 20,000 writes a day. Each leaderboard view costs about 52 reads and is cached for 5 minutes. Each finished test costs about 2 writes. That covers roughly 500–800 active users a day. Beyond that, move to the Blaze plan, which is pay-as-you-go and costs very little at that size.

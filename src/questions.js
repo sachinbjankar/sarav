@@ -10,6 +10,20 @@ export const SUBJECTS = [
   { id: 'marathi', name: 'मराठी व्याकरण', icon: '✍️', color: '#9D2B5B' },
   { id: 'ganit', name: 'अंकगणित', icon: '➗', color: '#5B3FA0' },
   { id: 'buddhimatta', name: 'बुद्धिमत्ता चाचणी', icon: '🧠', color: '#C2410C' },
+  { id: 'english', name: 'इंग्रजी व्याकरण', icon: '🔤', color: '#0F766E' },
+  // खालील दोन विषय इतर विषयांच्या प्रश्नांमधून बनतात (pool)
+  { id: 'gk', name: 'सामान्य ज्ञान', icon: '🌏', color: '#4338CA', pool: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan'] },
+  { id: 'csat', name: 'CSAT (गणित व बुद्धिमत्ता)', icon: '🧮', color: '#7C3AED', pool: ['ganit', 'buddhimatta'] },
+];
+
+// परीक्षा विभाग: प्रत्येक परीक्षेचे स्वतःचे विषय, आजची प्रश्नमंजुषा व रँकिंग
+export const EXAMS = [
+  { id: 'mpsc', name: 'MPSC', icon: '🏛️', full: 'राज्यसेवा • संयुक्त पूर्व परीक्षा', color: '#1E2A5A',
+    subjects: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'csat'] },
+  { id: 'police', name: 'पोलीस भरती', icon: '👮', full: 'पोलीस शिपाई • चालक • SRPF लेखी परीक्षा', color: '#1D4E89',
+    subjects: ['marathi', 'ganit', 'buddhimatta', 'gk'] },
+  { id: 'itar', name: 'इतर भरती', icon: '📋', full: 'तलाठी • ग्रामसेवक • जिल्हा परिषद • आरोग्य भरती', color: '#7A3E12',
+    subjects: ['marathi', 'english', 'gk', 'ganit', 'buddhimatta'] },
 ];
 
 const RAW = {
@@ -235,6 +249,34 @@ const RAW = {
     ['८ : ६४ :: ५ : ?', ['२५', '१२५', '४०', '३०'], '८ चा वर्ग ६४; तसाच ५ चा वर्ग २५.'],
     ['घड्याळात ६:०० वाजता दोन्ही काट्यांमध्ये किती अंशांचा कोन असतो?', ['१८०°', '९०°', '१५०°', '३६०°'], '६ तास × ३०° = १८०°; दोन्ही काटे एका सरळ रेषेत असतात.'],
     ['राहुलच्या आईच्या भावाचा मुलगा राहुलचा कोण?', ['मामेभाऊ', 'चुलतभाऊ', 'आतेभाऊ', 'मावसभाऊ'], 'आईचा भाऊ म्हणजे मामा; मामाचा मुलगा म्हणजे मामेभाऊ.'],
+  ],
+
+  english: [
+    ['Choose the correct plural of ‘child’.', ['children', 'childs', 'childrens', 'childes'], '‘Child’ चे अनेकवचन ‘children’ आहे.'],
+    ['Choose the synonym of ‘big’.', ['large', 'small', 'thin', 'short'], '‘Big’ = मोठा; समानार्थी शब्द ‘large’.'],
+    ['Choose the antonym of ‘ancient’.', ['modern', 'old', 'past', 'historic'], '‘Ancient’ = प्राचीन; विरुद्धार्थी ‘modern’ (आधुनिक).'],
+    ['She ___ to school every day.', ['goes', 'go', 'going', 'gone'], 'Third person singular (she) सोबत साध्या वर्तमानकाळात ‘goes’ वापरतात.'],
+    ['Fill in the blank with the correct article: ___ apple a day keeps the doctor away.', ['An', 'A', 'The', 'No article'], 'स्वराने (a, e, i, o, u) सुरू होणाऱ्या उच्चारापूर्वी ‘an’ वापरतात.'],
+    ['Choose the past tense of ‘write’.', ['wrote', 'writed', 'written', 'writes'], 'write – wrote – written. साधा भूतकाळ: wrote.'],
+    ['Identify the noun in the sentence: “The dog barked loudly.”', ['dog', 'barked', 'loudly', 'the'], '‘Dog’ हे प्राण्याचे नाव म्हणजे नाम (noun) आहे.'],
+    ['Identify the adverb: “He runs quickly.”', ['quickly', 'he', 'runs', 'none'], 'क्रिया कशी घडते ते सांगणारा ‘quickly’ हा क्रियाविशेषण (adverb) आहे.'],
+    ['Choose the correctly spelt word.', ['Necessary', 'Neccessary', 'Necesary', 'Neccesary'], 'बरोबर स्पेलिंग: N-E-C-E-S-S-A-R-Y (एक c, दोन s).'],
+    ['They have been living here ___ 2015.', ['since', 'for', 'from', 'by'], 'निश्चित वेळ-बिंदूसाठी ‘since’; कालावधीसाठी ‘for’ (for five years).'],
+    ['Choose the correct preposition: The book is ___ the table.', ['on', 'in', 'at', 'into'], 'पृष्ठभागावर ठेवलेल्या वस्तूसाठी ‘on’ वापरतात.'],
+    ['Choose the synonym of ‘brave’.', ['courageous', 'coward', 'weak', 'lazy'], '‘Brave’ = शूर; समानार्थी ‘courageous’.'],
+    ['Choose the antonym of ‘accept’.', ['reject', 'receive', 'admit', 'agree'], '‘Accept’ = स्वीकारणे; विरुद्धार्थी ‘reject’ (नाकारणे).'],
+    ['Change into passive voice: “Ram writes a letter.”', ['A letter is written by Ram.', 'A letter was written by Ram.', 'A letter is wrote by Ram.', 'A letter has written by Ram.'], 'साधा वर्तमानकाळ passive: is/are + past participle (written).'],
+    ['One word for ‘a person who writes poems’:', ['poet', 'author', 'editor', 'painter'], 'कविता लिहिणाऱ्या व्यक्तीला ‘poet’ (कवी) म्हणतात.'],
+    ['One word for ‘a place where books are kept for reading’:', ['library', 'laboratory', 'museum', 'gallery'], 'पुस्तके वाचण्यासाठी ठेवलेली जागा म्हणजे ‘library’ (ग्रंथालय).'],
+    ['Choose the correct sentence.', ['He is taller than me.', 'He is more taller than me.', 'He is tallest than me.', 'He is tall than me.'], 'दोघांची तुलना करताना comparative ‘taller than’ वापरतात.'],
+    ['What is the meaning of the idiom ‘a piece of cake’?', ['very easy', 'very tasty', 'a small part', 'a celebration'], '‘A piece of cake’ म्हणजे अतिशय सोपे काम.'],
+    ['Choose the plural of ‘mouse’.', ['mice', 'mouses', 'mices', 'mouse'], '‘Mouse’ चे अनेकवचन ‘mice’ आहे.'],
+    ['Neither Ravi nor his friends ___ present.', ['were', 'was', 'is', 'has'], 'Neither…nor मध्ये क्रियापद जवळच्या कर्त्यानुसार (friends: अनेकवचन) ‘were’.'],
+    ['Choose the correct question tag: “You are coming, ___?”', ['aren’t you', 'are you', 'isn’t it', 'don’t you'], 'होकारार्थी वाक्याला नकारार्थी tag: You are… → aren’t you?'],
+    ['Identify the pronoun: “She gave me a pen.”', ['she', 'gave', 'pen', 'a'], 'नामाऐवजी येणारा ‘she’ (तसेच ‘me’) सर्वनाम (pronoun) आहे.'],
+    ['Choose the opposite of ‘generous’.', ['miserly', 'kind', 'liberal', 'noble'], '‘Generous’ = उदार; विरुद्धार्थी ‘miserly’ (कंजूस).'],
+    ['If it rains, we ___ at home.', ['will stay', 'stayed', 'would stayed', 'staying'], 'First conditional: If + present simple, will + verb.'],
+    ['Choose the past participle of ‘go’.', ['gone', 'went', 'goed', 'going'], 'go – went – gone. Past participle: gone.'],
   ],
 };
 

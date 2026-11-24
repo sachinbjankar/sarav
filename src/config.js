@@ -24,3 +24,18 @@ export const APP = {
   name: 'सराव',
   privacyUrl: 'https://sachinbjankar.github.io/sarav/privacy.html',
 };
+
+// Firebase (खाते व रँकिंगसाठी). console.firebase.google.com → प्रकल्प "Sarav" → Web app ची config येथे टाका.
+// apiKey रिकामी असेल तर अ‍ॅप "डेमो" मोडमध्ये चालते (खाती व रँकिंग फक्त त्याच फोनवर).
+// या values गुप्त पासवर्ड नाहीत; माहितीचे संरक्षण firestore.rules करतात.
+export const firebaseConfig = {
+  apiKey: '',
+  authDomain: '',
+  projectId: '',
+  storageBucket: '',
+  messagingSenderId: '',
+  appId: '',
+};
+
+// रँकिंग: प्रत्येक बरोबर उत्तराला किती गुण
+export const POINTS_PER_CORRECT = 10;

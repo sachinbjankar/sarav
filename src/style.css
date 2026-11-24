@@ -264,3 +264,130 @@ html.native body.has-banner::after { display: none; }
 }
 .fake-ad b { display: block; font-size: 20px; }
 .fake-ad span { opacity: .7; font-size: 14px; }
+
+/* ---------- परीक्षा निवड ---------- */
+.top.tall { padding-bottom: 28px; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.center { text-align: center; margin-top: 14px; }
+.pick h2 { font-size: 22px; font-weight: 800; margin-top: 4px; }
+.pick > p { margin: 4px 0 16px; }
+.exam-card {
+  width: 100%; display: flex; align-items: center; gap: 14px; text-align: left;
+  background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 16px; margin-bottom: 12px;
+  transition: transform .08s;
+}
+.exam-card:active { transform: scale(.98); }
+.exam-card.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 6%, white); }
+.exam-card .ico {
+  width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; font-size: 28px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--c) 12%, white);
+}
+.exam-card .grow { flex: 1; display: flex; flex-direction: column; }
+.exam-card b { font-size: 20px; font-weight: 800; color: var(--c); }
+.exam-card small { font-size: 14px; color: var(--ink); }
+.exam-card em { font-style: normal; font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+.arrow { font-size: 26px; color: var(--muted); }
+.exam-chip {
+  margin-top: 2px; background: rgba(255,255,255,.16); color: #fff; border-radius: 99px; padding: 1px 10px 1px 8px;
+  font-size: 14px; font-weight: 700; display: inline-flex; gap: 4px; align-items: center;
+}
+.exam-chip span { font-size: 11px; opacity: .8; }
+
+.join-strip, .my-rank {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; margin-top: 14px;
+  background: #FFF8EC; border: 1.5px solid #F6C98A; border-radius: 18px; padding: 12px 14px;
+}
+.join-strip > span:first-child, .my-rank.cta > span:first-child { font-size: 26px; }
+.join-strip .grow, .my-rank .grow { flex: 1; display: flex; flex-direction: column; }
+.join-strip small, .my-rank small { color: var(--muted); font-size: 13.5px; }
+.my-rank { background: var(--navy); color: #fff; border: 0; margin: 0 0 14px; }
+.my-rank small { color: rgba(255,255,255,.75); }
+.my-rank.cta { background: #FFF8EC; color: var(--ink); border: 1.5px solid #F6C98A; }
+.my-rank.cta small { color: var(--muted); }
+
+.pts-note { display: block; width: 100%; margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: #FFF4E5; color: #8A4A0A; font-size: 15px; text-align: center; }
+.pts-note.ok { background: var(--green-bg); color: #155F35; }
+.pts-note.muted { background: var(--bg); color: var(--muted); font-size: 13.5px; }
+
+/* ---------- रँकिंग ---------- */
+.rank-top { justify-content: space-between !important; }
+.exam-tabs { display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; }
+.exam-tabs button {
+  flex: 1; white-space: nowrap; padding: 8px 10px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: var(--card); font-weight: 700; font-size: 14.5px;
+}
+.exam-tabs button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+.demo-note { font-size: 13px; color: #8A6A00; background: #FFF8DB; border-radius: 10px; padding: 6px 10px; margin-bottom: 12px; }
+.av {
+  --h: 200; width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center;
+  background: hsl(var(--h) 55% 88%); color: hsl(var(--h) 55% 28%); font-weight: 800; font-size: 18px;
+}
+.av.big { width: 60px; height: 60px; font-size: 26px; }
+.podium { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: end; margin: 8px 0 14px; }
+.pod { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+.pod b { font-size: 14.5px; line-height: 1.25; margin-top: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod small { font-size: 12px; color: var(--muted); }
+.pod .crown { font-size: 24px; }
+.pod .av { width: 52px; height: 52px; font-size: 22px; box-shadow: 0 0 0 3px #fff; }
+.pod.p1 .av { width: 64px; height: 64px; font-size: 26px; box-shadow: 0 0 0 3px #F2B533; }
+.pod .step {
+  width: 100%; margin-top: 6px; border-radius: 14px 14px 6px 6px; display: grid; place-items: start center; padding-top: 8px;
+  color: #fff; font-weight: 800; font-size: 16px;
+}
+.pod.p1 .step { height: 86px; background: linear-gradient(180deg, #F2B533, #D9921A); }
+.pod.p2 .step { height: 64px; background: linear-gradient(180deg, #A7B0C2, #838DA3); }
+.pod.p3 .step { height: 50px; background: linear-gradient(180deg, #D49A6A, #B2774A); }
+.ranklist { list-style: none; padding: 0; margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.ranklist li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; }
+.ranklist li + li { border-top: 1px solid var(--line); }
+.ranklist li.me { background: #FFF4E5; }
+.ranklist .rk { width: 28px; text-align: center; font-weight: 800; color: var(--muted); }
+.ranklist .grow { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.ranklist .grow b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ranklist small { color: var(--muted); font-size: 12.5px; }
+.ranklist .pts { font-weight: 800; color: var(--navy); }
+
+/* ---------- प्रोफाइल ---------- */
+.profile { display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 16px; }
+.profile .grow { flex: 1; min-width: 0; }
+.profile h2 { font-size: 20px; font-weight: 800; }
+.profile p { font-size: 13.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.icon-btn.soft { background: var(--bg); border: 1px solid var(--line); }
+.auth-card { background: linear-gradient(135deg, var(--navy), var(--navy-2)); color: #fff; border-radius: 22px; padding: 18px; }
+.auth-card h2 { font-size: 20px; font-weight: 800; }
+.auth-card ul { list-style: none; padding: 0; margin: 10px 0 16px; display: flex; flex-direction: column; gap: 4px; }
+.auth-card .btn.primary { background: var(--saffron); }
+.auth-card .btn.ghost { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.3); color: #fff; }
+.auth-card .row2 { margin-top: 0; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px; margin-top: 14px; }
+.panel-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 15px; }
+.delta { font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.delta.up { background: var(--green-bg); color: var(--green); }
+.delta.down { background: var(--red-bg); color: var(--red); }
+.chart { width: 100%; height: auto; display: block; }
+.chart .grid { stroke: #ECE8DE; stroke-width: 1; }
+.chart .gl { font-size: 10px; fill: var(--muted); }
+.chart .line { fill: none; stroke: var(--saffron); stroke-width: 2.5; stroke-linejoin: round; }
+.chart .area { fill: rgba(242, 140, 40, .12); }
+.chart .dot { fill: #fff; stroke: var(--saffron); stroke-width: 2; }
+.hscore { min-width: 54px; text-align: center; font-weight: 800; border-radius: 10px; padding: 4px 6px; font-size: 15px; }
+.hscore.good { background: var(--green-bg); color: var(--green); }
+.hscore.mid { background: #FFF4E5; color: #B4560E; }
+.hscore.low { background: var(--red-bg); color: var(--red); }
+.hist .srow { padding: 10px 0; }
+
+/* ---------- फॉर्म ---------- */
+.form { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+.form label { display: flex; flex-direction: column; gap: 4px; font-weight: 700; font-size: 15px; }
+.form label small { font-weight: 400; color: var(--muted); }
+.form input, .form select {
+  font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: var(--card); color: var(--ink); width: 100%;
+}
+.form input:focus, .form select:focus { outline: none; border-color: var(--navy-2); box-shadow: 0 0 0 3px rgba(46,63,128,.15); }
+.form-msg { background: #FFF4E5; color: #8A4A0A; padding: 10px 12px; border-radius: 12px; font-size: 14.5px; }
+.btn.danger-btn { background: var(--red); color: #fff; }
+.modal .form { margin-top: 12px; }
+.modal .small { margin-top: 6px; font-weight: 400; font-size: 14px; }
+.srow .grow { display: flex; flex-direction: column; min-width: 0; }
