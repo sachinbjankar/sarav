@@ -822,12 +822,12 @@ function meView() {
         <div class="grow"><b>${esc(h.title || '')}</b><small>${dateMr(h.at)}${h.pts ? ` • +${mr(h.pts)} गुण` : ''}</small></div>
       </div>`).join('')}</section>` : '<p class="muted small">अजून एकही चाचणी दिली नाही.</p>'}
 
-    <div class="stack">
+    <p class="muted small" style="text-align:center;word-break:break-word;margin:18px 0 6px">जाहिरात स्थिती — ${esc(adStatus())}</p>
+    <div class="stack" style="padding-bottom:120px">
       <a class="btn link" href="${APP.privacyUrl}" target="_blank" rel="noopener">गोपनीयता धोरण</a>
       ${user ? '<button class="btn link" data-act="logout">लॉगआउट</button><button class="btn link danger" data-act="delete-account">खाते कायमचे हटवा</button>'
         : '<button class="btn link danger" data-act="reset">या फोनवरील प्रगती पुसून टाका</button>'}
     </div>
-    <p class="muted small" style="text-align:center;opacity:.6;word-break:break-word">जाहिरात स्थिती — ${esc(adStatus())}</p>
   </main>
   ${tabbar()}`;
 }
