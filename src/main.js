@@ -376,7 +376,7 @@ function pickView() {
         <span class="ico">${e.icon}</span>
         <span class="grow"><b>${e.name}</b><small>${e.full}</small>
           <em>${e.subjects.map((s) => subj[s].name).join(' • ')}</em>
-          <em class="pat">📝 ${e.pattern} • ${mr(examPool(e).length)} सराव प्रश्न</em></span>
+          <em class="pat">📝 ${e.pattern}</em></span>
         <span class="arrow">›</span>
       </button>`).join('')}
   </main>`;
@@ -420,9 +420,9 @@ function homeView() {
     </button>`}
 
     <section class="mini-stats">
-      <div><b>${mr(st.seen)}/${mr(st.total)}</b><span>प्रश्न सोडवले</span></div>
+      <div><b>${mr(store.testsFor(e.id))}</b><span>चाचण्या पूर्ण</span></div>
+      <div><b>${mr(st.seen)}</b><span>प्रश्न सोडवले</span></div>
       <div><b>${mr(st.acc)}%</b><span>अचूकता</span></div>
-      <div><b>${player ? mr(player[scoreField(e.id, 'all')] || 0) : mr(store.get().tests)}</b><span>${player ? 'एकूण गुण' : 'चाचण्या'}</span></div>
     </section>
 
     <div class="row2">
@@ -439,13 +439,12 @@ function homeView() {
       ${e.subjects.map((sid) => {
         const s = subj[sid];
         const ss = subjectStats(sid);
-        const pct = Math.round((ss.seen / ss.total) * 100);
         return `
         <button class="subject" style="--c:${s.color}" data-act="start" data-mode="subject" data-sid="${s.id}">
           <span class="ico">${s.icon}</span>
           <b>${s.name}</b>
-          <small>${mr(ss.seen)}/${mr(ss.total)} सोडवले${ss.acc !== null ? ` • ${mr(ss.acc)}% बरोबर` : ''}</small>
-          <i class="bar"><i style="width:${pct}%"></i></i>
+          <small>${ss.seen ? `${mr(ss.seen)} प्रश्न सोडवले • ${mr(ss.acc)}% बरोबर` : 'सराव सुरू करा'}</small>
+          <i class="bar"><i style="width:${ss.acc ?? 0}%"></i></i>
         </button>`;
       }).join('')}
     </section>
@@ -732,7 +731,7 @@ function meView() {
           <span class="ico">${s.icon}</span>
           <div class="grow"><b>${s.name}</b>
             <i class="bar" style="--c:${s.color}"><i style="width:${ss.acc ?? 0}%"></i></i>
-            <small>${mr(ss.seen)}/${mr(ss.total)} सोडवले</small></div>
+            <small>${mr(ss.seen)} प्रश्न सोडवले</small></div>
           <b class="pct">${ss.acc === null ? '–' : mr(ss.acc) + '%'}</b>
         </div>`;
       }).join('')}

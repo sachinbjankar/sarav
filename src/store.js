@@ -48,6 +48,8 @@ export const store = {
 
   finishTest(result) {
     data.tests++;
+    data.testsBy = data.testsBy || {};
+    data.testsBy[result.exam] = (data.testsBy[result.exam] || 0) + 1;
     if (result.score > data.best) data.best = result.score;
     const t = today();
     if (data.streak.last !== t) {
@@ -60,6 +62,8 @@ export const store = {
     save();
     return data.tests;
   },
+
+  testsFor: (exam) => Math.max((data.testsBy || {})[exam] || 0, data.hist.filter((h) => h.exam === exam).length),
 
   dailyFor: (exam) => data.daily[exam] || { date: '' },
 
@@ -101,6 +105,8 @@ export const store = {
     const seen = new Set(data.hist.map((h) => h.at));
     data.hist = [...data.hist, ...(cloud.hist || []).filter((h) => !seen.has(h.at))].sort((a, b) => b.at - a.at).slice(0, 60);
     data.tests = Math.max(data.tests, cloud.tests || 0);
+    data.testsBy = data.testsBy || {};
+    for (const [e, n] of Object.entries(cloud.testsBy || {})) data.testsBy[e] = Math.max(data.testsBy[e] || 0, n);
     data.best = Math.max(data.best, cloud.best || 0);
     if (!data.exam) data.exam = cloud.exam || '';
     save();
