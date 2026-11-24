@@ -8,6 +8,14 @@ let ready = false;
 let bannerShown = false;
 let bannerWanted = false;
 let lastInterstitial = 0;
+const log = {};
+const note = (k, v) => { log[k] = v; };
+// "मी" पानावर दिसणारी जाहिरात-स्थिती (तपासणीसाठी)
+export function adStatus() {
+  if (!native) return 'web';
+  return ['init', 'banner', 'full', 'reward'].filter((k) => log[k]).map((k) => `${k}: ${log[k]}`).join(' | ') || 'init: सुरू…';
+}
+const errText = (e) => (e && (e.code !== undefined ? `code ${e.code} ` : '') + (e && (e.message || e.errorMessage) || String(e))).slice(0, 90);
 
 function setAdHeight(px) {
   document.documentElement.style.setProperty('--ad-h', `${px}px`);
@@ -26,13 +34,17 @@ export async function initAds() {
     if (consent.isConsentFormAvailable && consent.status === mod.AdmobConsentStatus.REQUIRED) {
       consent = await AdMob.showConsentForm();
     }
-    if (consent.canRequestAds === false) return;
+    if (consent.canRequestAds === false) { note('init', 'consent नाही'); return; }
     await AdMob.initialize({ initializeForTesting: ADS.TESTING });
     AdMob.addListener(mod.BannerAdPluginEvents.SizeChanged, (size) => setAdHeight(size.height || 0));
+    AdMob.addListener(mod.BannerAdPluginEvents.Loaded, () => note('banner', 'दिसली ✓'));
+    AdMob.addListener(mod.BannerAdPluginEvents.FailedToLoad, (e) => { note('banner', 'नाही: ' + errText(e)); bannerShown = false; });
     ready = true;
+    note('init', 'ok');
     if (bannerWanted) showBanner();
   } catch (err) {
     console.warn('AdMob init failed', err);
+    note('init', 'अयशस्वी: ' + errText(err));
   }
 }
 
@@ -60,6 +72,7 @@ export async function showBanner() {
     }
   } catch (err) {
     console.warn('banner failed', err);
+    note('banner', 'नाही: ' + errText(err));
   }
 }
 
@@ -82,8 +95,10 @@ export async function maybeInterstitial(testsDone) {
   try {
     await AdMob.prepareInterstitial({ adId: ADS.INTERSTITIAL, isTesting: ADS.TESTING });
     await AdMob.showInterstitial();
+    note('full', 'दिसली ✓');
   } catch (err) {
     console.warn('interstitial failed', err);
+    note('full', 'नाही: ' + errText(err));
   }
 }
 
@@ -97,9 +112,11 @@ export async function showRewarded() {
   try {
     await AdMob.prepareRewardVideoAd({ adId: ADS.REWARDED, isTesting: ADS.TESTING });
     const reward = await AdMob.showRewardVideoAd();
+    note('reward', 'दिसली ✓');
     return !!reward;
   } catch (err) {
     console.warn('rewarded not completed', err);
+    note('reward', 'नाही: ' + errText(err));
     return false;
   }
 }

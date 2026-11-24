@@ -7,7 +7,7 @@ import './style.css';
 import { Capacitor } from '@capacitor/core';
 import { SUBJECTS, EXAMS, QUESTIONS, loadBank, full } from './questions.js';
 import { store, today } from './store.js';
-import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded } from './ads.js';
+import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded, adStatus } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
 import { backend } from './backend.js';
 import { DISTRICTS, errText, scoreField } from './backend-common.js';
@@ -827,6 +827,7 @@ function meView() {
       ${user ? '<button class="btn link" data-act="logout">लॉगआउट</button><button class="btn link danger" data-act="delete-account">खाते कायमचे हटवा</button>'
         : '<button class="btn link danger" data-act="reset">या फोनवरील प्रगती पुसून टाका</button>'}
     </div>
+    <p class="muted small" style="text-align:center;opacity:.6;word-break:break-word">जाहिरात स्थिती — ${esc(adStatus())}</p>
   </main>
   ${tabbar()}`;
 }
