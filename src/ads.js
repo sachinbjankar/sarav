@@ -30,17 +30,23 @@ export async function initAds() {
   try {
     const mod = await import('@capacitor-community/admob');
     AdMob = mod.AdMob;
-    let consent = await AdMob.requestConsentInfo();
-    if (consent.isConsentFormAvailable && consent.status === mod.AdmobConsentStatus.REQUIRED) {
-      consent = await AdMob.showConsentForm();
+    // संमती (युरोपसाठी). AdMob मध्ये संमती फॉर्म नसेल तर ही पायरी अयशस्वी होते; तरीही जाहिराती सुरू ठेवा.
+    let consentNote = '';
+    try {
+      let consent = await AdMob.requestConsentInfo();
+      if (consent.isConsentFormAvailable && consent.status === mod.AdmobConsentStatus.REQUIRED) {
+        consent = await AdMob.showConsentForm();
+      }
+      if (consent.canRequestAds === false) { note('init', 'consent नाही'); return; }
+    } catch (e) {
+      consentNote = ' (consent फॉर्म नाही)';
     }
-    if (consent.canRequestAds === false) { note('init', 'consent नाही'); return; }
     await AdMob.initialize({ initializeForTesting: ADS.TESTING });
     AdMob.addListener(mod.BannerAdPluginEvents.SizeChanged, (size) => setAdHeight(size.height || 0));
     AdMob.addListener(mod.BannerAdPluginEvents.Loaded, () => note('banner', 'दिसली ✓'));
     AdMob.addListener(mod.BannerAdPluginEvents.FailedToLoad, (e) => { note('banner', 'नाही: ' + errText(e)); bannerShown = false; });
     ready = true;
-    note('init', 'ok');
+    note('init', 'ok' + consentNote);
     if (bannerWanted) showBanner();
   } catch (err) {
     console.warn('AdMob init failed', err);
