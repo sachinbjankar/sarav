@@ -11,6 +11,8 @@ const blank = () => ({
   pending: [],      // रँकिंगमध्ये अजून न पाठवलेले गुण: { exam, pts }
   tests: 0,
   best: 0,
+  xp: 0,            // अनुभव गुण (स्तरासाठी)
+  levels: {},       // विषय → { n: पूर्ण स्तर, st: { स्तर क्रमांक: तारे } }
 });
 
 let data;
@@ -65,6 +67,19 @@ export const store = {
 
   testsFor: (exam) => Math.max((data.testsBy || {})[exam] || 0, data.hist.filter((h) => h.exam === exam).length),
 
+  // ---- Duolingo-सारखे स्तर ----
+  pathOf: (sid) => data.levels[sid] || { n: 0, st: {} },
+  completeLevel(sid, idx, stars) {
+    const p = data.levels[sid] || { n: 0, st: {} };
+    const first = !p.st[idx];
+    p.st[idx] = Math.max(p.st[idx] || 0, stars);
+    if (stars > 0 && idx >= p.n) p.n = idx + 1;
+    data.levels[sid] = p;
+    save();
+    return first;
+  },
+  addXp(n) { const before = data.xp || 0; data.xp = before + n; save(); return [before, data.xp]; },
+
   dailyFor: (exam) => data.daily[exam] || { date: '' },
 
   streak() {
@@ -108,6 +123,13 @@ export const store = {
     data.testsBy = data.testsBy || {};
     for (const [e, n] of Object.entries(cloud.testsBy || {})) data.testsBy[e] = Math.max(data.testsBy[e] || 0, n);
     data.best = Math.max(data.best, cloud.best || 0);
+    data.xp = Math.max(data.xp || 0, cloud.xp || 0);
+    for (const [sid, p] of Object.entries(cloud.levels || {})) {
+      const l = data.levels[sid] || { n: 0, st: {} };
+      const st = { ...p.st };
+      for (const [k, v] of Object.entries(l.st)) st[k] = Math.max(st[k] || 0, v);
+      data.levels[sid] = { n: Math.max(l.n, p.n || 0), st };
+    }
     if (!data.exam) data.exam = cloud.exam || '';
     save();
   },

@@ -99,6 +99,36 @@ function buildItems(questions, rand = Math.random) {
   });
 }
 
+// ---------- स्तर (Duolingo-सारखा मार्ग) ----------
+const UNIT_NAMES = ['सुरुवात', 'पाया पक्का', 'सराव वाढवा', 'आत्मविश्वास', 'वेग व अचूकता', 'परीक्षा तयारी', 'तज्ज्ञ'];
+const PER_UNIT = 8;
+const levelCache = new Map();
+// सोप्या प्रश्नांपासून कठीण प्रश्नांकडे: लहान संख्या व छोटे प्रश्न आधी
+function difficulty(q) {
+  const digits = (q.q.match(/[०-९0-9]/g) || []).length;
+  const optLen = q.o.reduce((a, o) => a + String(o).length, 0) / 4;
+  return digits * 1.2 + q.q.length / 30 + optLen / 12;
+}
+function levelPool(sid) {
+  if (!levelCache.has(sid)) {
+    const p = poolOf(sid).slice().sort((a, b) => difficulty(a) - difficulty(b) || (a.id < b.id ? -1 : 1));
+    levelCache.set(sid, p);
+  }
+  return levelCache.get(sid);
+}
+const levelCount = (sid) => Math.floor(levelPool(sid).length / QUIZ.PER_TEST);
+const isChest = (idx) => idx % 4 === 3;
+const unitName = (u) => (u < UNIT_NAMES.length ? UNIT_NAMES[u] : `${UNIT_NAMES[UNIT_NAMES.length - 1]} ${mr(u - UNIT_NAMES.length + 2)}`);
+const starsFor = (score, total) => { const p = score / total; return p >= 1 ? 3 : p >= 0.8 ? 2 : p >= 0.6 ? 1 : 0; };
+
+// एकूण स्तर (XP वरून): स्तर L साठी लागणारे XP = ५० × L × (L − १) / २
+const xpFor = (L) => (50 * L * (L - 1)) / 2;
+function userLevel(xp = store.get().xp || 0) {
+  let L = 1;
+  while (xpFor(L + 1) <= xp) L++;
+  return { L, cur: xp - xpFor(L), need: xpFor(L + 1) - xpFor(L) };
+}
+
 function prioritised(pool, n = QUIZ.PER_TEST) {
   const ans = store.get().ans;
   const unseen = shuffle(pool.filter((q) => !ans[q.id]));
@@ -119,12 +149,18 @@ const wrongQuestions = (e) => {
 };
 
 // ---------- चाचणी ----------
-function startQuiz(mode, sid) {
+function startQuiz(mode, sid, lvl) {
   const e = exam();
   let items;
   let title;
   let retry = false;
-  if (mode === 'daily') {
+  if (mode === 'level') {
+    const idx = Number(lvl);
+    const rand = rng(`${sid}-L${idx}-${Date.now()}`);
+    items = buildItems(levelPool(sid).slice(idx * QUIZ.PER_TEST, (idx + 1) * QUIZ.PER_TEST), rand);
+    title = `${subj[sid].name} • स्तर ${mr(idx + 1)}`;
+    retry = !!store.pathOf(sid).st[idx];
+  } else if (mode === 'daily') {
     items = dailyQuestions(e);
     title = 'आजची प्रश्नमंजुषा';
     retry = store.dailyFor(e.id).date === today();
@@ -143,9 +179,9 @@ function startQuiz(mode, sid) {
   }
   if (!items.length) return startQuiz('mixed');
   // रँकिंगचे गुण: आजची प्रश्नमंजुषा (पहिल्यांदा), विषय चाचणी व मिश्र चाचणी
-  const ranked = (mode === 'daily' && !retry) || mode === 'subject' || mode === 'mixed';
+  const ranked = (mode === 'daily' && !retry) || (mode === 'level' && !retry) || mode === 'subject' || mode === 'mixed';
   quiz = {
-    mode, sid, title, items, retry, ranked, exam: e.id,
+    mode, sid, title, items, retry, ranked, exam: e.id, lvl: Number(lvl),
     i: 0,
     answers: items.map(() => null),
     removed: items.map(() => []),
@@ -217,6 +253,17 @@ async function finish() {
   quiz.score = score;
   quiz.secs = Math.round((Date.now() - quiz.started) / 1000);
   quiz.pts = quiz.ranked ? score * POINTS_PER_CORRECT : 0;
+  let xp = score * POINTS_PER_CORRECT;
+  if (quiz.mode === 'level') {
+    quiz.stars = starsFor(score, quiz.items.length);
+    const before = store.pathOf(quiz.sid).st[quiz.lvl] || 0;
+    if (quiz.stars > 0) store.completeLevel(quiz.sid, quiz.lvl, quiz.stars);
+    if (quiz.stars > before) xp += 20 + (isChest(quiz.lvl) && !before ? 30 : 0);
+    quiz.chest = isChest(quiz.lvl) && quiz.stars > 0 && !before;
+  }
+  const [x0, x1] = store.addXp(xp);
+  quiz.xp = xp;
+  quiz.levelUp = userLevel(x1).L > userLevel(x0).L ? userLevel(x1).L : 0;
   const n = store.finishTest({
     exam: quiz.exam, mode: quiz.mode, sid: quiz.sid || '', title: quiz.title,
     score, total: quiz.items.length, secs: quiz.secs, pts: quiz.pts, retry: quiz.retry,
@@ -305,6 +352,7 @@ async function back() {
   if (view === 'quiz') {
     if (await confirmBox('चाचणी अर्धवट सोडायची?', 'हो, सोडा', 'नाही')) { stopTimer(); quiz = null; go('home'); }
   } else if (view === 'review') go('result');
+  else if (view === 'result' && quiz?.mode === 'level') { pathSid = quiz.sid; quiz = null; go('path'); scrollToCurrent(); }
   else if (view === 'auth') go('me');
   else if (view === 'pick' && !store.get().exam) {
     /* पहिल्यांदा परीक्षा निवडल्याशिवाय पुढे नाही */
@@ -399,7 +447,10 @@ function homeView() {
       <div class="logo">स</div>
       <div><h1>${APP.name}</h1>${examChip()}</div>
     </div>
-    <div class="streak" title="सलग दिवस">🔥 ${mr(store.streak())}</div>
+    <div class="pills">
+      <button class="lvl-pill" data-act="tab" data-v="me" title="तुमचा स्तर">${levelBadge()}</button>
+      <div class="streak" title="सलग दिवस">🔥 ${mr(store.streak())}</div>
+    </div>
   </header>
 
   <main class="wrap">
@@ -440,11 +491,11 @@ function homeView() {
         const s = subj[sid];
         const ss = subjectStats(sid);
         return `
-        <button class="subject" style="--c:${s.color}" data-act="start" data-mode="subject" data-sid="${s.id}">
+        <button class="subject" style="--c:${s.color}" data-act="path" data-sid="${s.id}">
           <span class="ico">${s.icon}</span>
           <b>${s.name}</b>
-          <small>${ss.seen ? `${mr(ss.seen)} प्रश्न सोडवले • ${mr(ss.acc)}% बरोबर` : 'सराव सुरू करा'}</small>
-          <i class="bar"><i style="width:${ss.acc ?? 0}%"></i></i>
+          <small>स्तर ${mr(store.pathOf(s.id).n + 1)}${ss.seen ? ` • ${mr(ss.acc)}% बरोबर` : ''}</small>
+          <i class="bar"><i style="width:${((store.pathOf(s.id).n % PER_UNIT) / PER_UNIT) * 100}%"></i></i>
         </button>`;
       }).join('')}
     </section>
@@ -513,13 +564,21 @@ function resultView() {
     ptsLine = user
       ? `<div class="pts-note ok">🏆 <b>+${mr(quiz.pts)} गुण</b> ${examById[quiz.exam].name} रँकिंगमध्ये जोडले</div>`
       : `<button class="pts-note" data-act="tab" data-v="auth">🏆 <b>+${mr(quiz.pts)} गुण</b> मिळाले! खाते तयार करा आणि रँकिंगमध्ये या ›</button>`;
-  } else if (quiz.ranked === false) {
-    ptsLine = '<div class="pts-note muted">ही सराव चाचणी होती; रँकिंगचे गुण आजची प्रश्नमंजुषा, विषय व मिश्र चाचणीला मिळतात.</div>';
+  } else if (quiz.ranked === false && quiz.mode !== 'level') {
+    ptsLine = '<div class="pts-note muted">ही सराव चाचणी होती; रँकिंगचे गुण आजची प्रश्नमंजुषा, स्तर व मिश्र चाचणीला मिळतात.</div>';
   }
+  const isLvl = quiz.mode === 'level';
+  const nextIdx = quiz.lvl + 1;
+  const hasNext = isLvl && quiz.stars > 0 && nextIdx < levelCount(quiz.sid);
+  const lvlBox = isLvl ? `
+      <div class="lvl-stars">${[1, 2, 3].map((k) => `<span class="${k <= quiz.stars ? 'on' : ''}">★</span>`).join('')}</div>
+      <p class="lvl-msg">${quiz.stars ? `स्तर ${mr(quiz.lvl + 1)} पूर्ण!${quiz.chest ? ' 🎁 खजिना उघडला: +३० XP' : ''}` : 'स्तर पार करण्यासाठी किमान ६ प्रश्न बरोबर हवेत. पुन्हा प्रयत्न करा!'}</p>` : '';
+  const xpLine = `<div class="xp-note">⚡ +${mr(quiz.xp)} XP${quiz.levelUp ? ` • 🎉 तुम्ही स्तर ${mr(quiz.levelUp)} गाठला!` : ''}</div>`;
   return `
-  <header class="top slim"><h1>निकाल</h1></header>
+  <header class="top slim"><h1>${isLvl ? 'स्तर निकाल' : 'निकाल'}</h1></header>
   <main class="wrap">
     <section class="result">
+      ${lvlBox}
       <div class="score-ring" style="--p:${quiz.score / total}">
         <div><b>${mr(quiz.score)}</b><span>/${mr(total)}</span></div>
       </div>
@@ -531,11 +590,14 @@ function resultView() {
         <div><b>${mr(skipped)}</b><span>वेळ संपली</span></div>
         <div><b>${mr(min)}:${mr(String(sec).padStart(2, '0'))}</b><span>वेळ</span></div>
       </div>
+      ${xpLine}
       ${ptsLine}
     </section>
     <div class="stack">
+      ${hasNext ? `<button class="btn go" data-act="start" data-mode="level" data-sid="${quiz.sid}" data-lvl="${nextIdx}">पुढील स्तर ${mr(nextIdx + 1)} →</button>` : ''}
+      ${isLvl && !quiz.stars ? `<button class="btn go" data-act="start" data-mode="level" data-sid="${quiz.sid}" data-lvl="${quiz.lvl}">पुन्हा प्रयत्न करा</button>` : ''}
       <button class="btn primary" data-act="review">उत्तरे व स्पष्टीकरण पहा</button>
-      <button class="btn ghost" data-act="again">पुन्हा नवीन चाचणी</button>
+      ${isLvl ? `<button class="btn ghost" data-act="path" data-sid="${quiz.sid}">मार्गावर परत जा</button>` : '<button class="btn ghost" data-act="again">पुन्हा नवीन चाचणी</button>'}
       <button class="btn ghost" data-act="share">📤 मित्रांना पाठवा</button>
       <button class="btn link" data-act="tab" data-v="home">मुख्य पानावर जा</button>
     </div>
@@ -710,6 +772,7 @@ function meView() {
   <header class="top slim"><h1>${user ? 'माझे प्रोफाइल' : 'माझी प्रगती'}</h1></header>
   <main class="wrap">
     ${head}
+    ${(() => { const u = userLevel(); return `<section class="lvl-card"><span class="lv-ring big" style="--p:${u.cur / u.need}"><b>${mr(u.L)}</b></span><div class="grow"><b>स्तर ${mr(u.L)}</b><small>पुढील स्तरासाठी ${mr(u.need - u.cur)} XP बाकी • एकूण ${mr(store.get().xp || 0)} XP</small><i class="bar" style="--c:var(--saffron)"><i style="width:${(u.cur / u.need) * 100}%"></i></i></div></section>`; })()}
     <h3 class="sec">${e.icon} ${e.name} • प्रगती</h3>
     <section class="mini-stats">
       <div><b>🔥 ${mr(store.streak())}</b><span>सलग दिवस</span></div>
@@ -846,10 +909,56 @@ async function deleteAccount() {
   } catch (err) { toast(errText(err)); }
 }
 
+function levelBadge() {
+  const u = userLevel();
+  return `<span class="lv-ring" style="--p:${u.cur / u.need}"><b>${mr(u.L)}</b></span><span>स्तर</span>`;
+}
+
+let pathSid = '';
+function pathView() {
+  const s = subj[pathSid];
+  const p = store.pathOf(pathSid);
+  const total = levelCount(pathSid);
+  const cur = Math.min(p.n, total - 1);
+  const units = Math.min(Math.floor(cur / PER_UNIT) + 2, Math.ceil(total / PER_UNIT));
+  const offs = [0, 46, 78, 46, 0, -46, -78, -46];
+  let html = '';
+  for (let u = 0; u < units; u++) {
+    const locked = u * PER_UNIT > cur;
+    html += `<div class="unit ${locked ? 'locked' : ''}" style="--c:${s.color}"><small>टप्पा ${mr(u + 1)}</small><b>${unitName(u)}</b></div><div class="trail">`;
+    for (let k = 0; k < PER_UNIT; k++) {
+      const idx = u * PER_UNIT + k;
+      if (idx >= total) break;
+      const st = p.st[idx] || 0;
+      const state = idx < p.n || st ? 'done' : idx === cur ? 'current' : 'locked';
+      const icon = state === 'locked' ? (isChest(idx) ? '🎁' : '🔒') : isChest(idx) ? (st ? '🏆' : '🎁') : st ? '✓' : '★';
+      html += `
+        <div class="node-wrap" style="--x:${offs[k % offs.length]}px">
+          ${state === 'current' ? `<div class="bubble">${st ? 'पुन्हा' : 'सुरू करा'}</div>` : ''}
+          <button class="node ${state} ${isChest(idx) ? 'chest' : ''}" style="--c:${s.color}" ${state === 'locked' ? 'disabled' : `data-act="start" data-mode="level" data-sid="${pathSid}" data-lvl="${idx}"`} aria-label="स्तर ${idx + 1}">
+            <span>${icon}</span>
+          </button>
+          <div class="node-meta">${state === 'done' ? `<span class="mini-stars">${[1, 2, 3].map((x) => (x <= st ? '★' : '☆')).join('')}</span>` : `स्तर ${mr(idx + 1)}`}</div>
+        </div>`;
+    }
+    html += '</div>';
+  }
+  return `
+  <header class="top slim path-top" style="background:${s.color}">
+    <button class="icon-btn" data-act="tab" data-v="home" aria-label="मागे">←</button>
+    <div class="grow"><h1>${s.icon} ${s.name}</h1><p>स्तर ${mr(cur + 1)} • ${mr(Object.values(p.st).reduce((a, b) => a + b, 0))} ★ मिळवले</p></div>
+  </header>
+  <main class="wrap path">
+    ${html}
+    <p class="foot">प्रत्येक स्तरात ${mr(QUIZ.PER_TEST)} प्रश्न • किमान ६ बरोबर = पुढचा स्तर उघडतो • प्रत्येक चौथ्या स्तरावर 🎁 खजिना</p>
+  </main>
+  ${tabbar()}`;
+}
+
 function render(keepAnim = false) {
   if (!store.get().exam && view !== 'pick') view = 'pick';
   const views = {
-    pick: pickView, home: homeView, quiz: () => quizView(!keepAnim), result: resultView, review: reviewView,
+    pick: pickView, home: homeView, path: pathView, quiz: () => quizView(!keepAnim), result: resultView, review: reviewView,
     saved: savedView, rank: rankView, me: meView, auth: authView,
   };
   app.innerHTML = (views[view] || homeView)();
@@ -874,7 +983,8 @@ document.addEventListener('click', async (e) => {
   if (el.classList.contains('disabled')) return;
 
   switch (act) {
-    case 'start': return startQuiz(el.dataset.mode, el.dataset.sid);
+    case 'start': return startQuiz(el.dataset.mode, el.dataset.sid, el.dataset.lvl);
+    case 'path': pathSid = el.dataset.sid; quiz = view === 'result' ? null : quiz; go('path'); return scrollToCurrent();
     case 'ans': return answer(Number(el.dataset.k));
     case 'next': return next();
     case 'fifty': return useFifty();
@@ -891,7 +1001,7 @@ document.addEventListener('click', async (e) => {
       return go('home');
     case 'review': reviewOnlyWrong = false; return go('review');
     case 'filter': reviewOnlyWrong = el.dataset.v === 'wrong'; return render();
-    case 'again': return startQuiz(quiz.mode === 'daily' ? 'mixed' : quiz.mode, quiz.sid);
+    case 'again': return startQuiz(quiz.mode === 'daily' ? 'mixed' : quiz.mode, quiz.sid, quiz.lvl);
     case 'save': {
       const on = store.toggleSave(quiz.items[quiz.i].q.id);
       toast(on ? 'प्रश्न जतन केला' : 'जतन यादीतून काढला');
@@ -915,6 +1025,11 @@ document.addEventListener('click', async (e) => {
       }
   }
 });
+
+function scrollToCurrent() {
+  const el = document.querySelector('.node.current');
+  if (el) el.scrollIntoView({ block: 'center' });
+}
 
 async function shareScore() {
   const text = `मी ‘${APP.name}’ अ‍ॅपवर ${examById[quiz.exam].name} – ${quiz.title} मध्ये ${mr(quiz.score)}/${mr(quiz.items.length)} गुण मिळवले! 🎯 तुम्हीपण सराव करा आणि रँकिंगमध्ये या.`;
