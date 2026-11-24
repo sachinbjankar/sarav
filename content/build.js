@@ -15,6 +15,9 @@ import { genMarathi } from './tables/marathi.js';
 import { genEnglish } from './tables/english.js';
 import { genPanchayat, genMahsul } from './tables/hand.js';
 import { genGkExtra } from './tables/gk-extra.js';
+import { genItihas2 } from './tables/itihas2.js';
+import { genBhugol2 } from './tables/bhugol2.js';
+import { genPairs } from './tables/pairs-all.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(here, '..', 'public', 'qbank');
@@ -22,7 +25,7 @@ fs.mkdirSync(out, { recursive: true });
 
 const parts = [
   ...genItihas(), ...genBhugol(), ...genRajya(), ...genArtha(), ...genVidnyan(),
-  ...genMarathi(), ...genEnglish(), ...genPanchayat(), ...genMahsul(), ...genGkExtra(),
+  ...genMarathi(), ...genEnglish(), ...genPanchayat(), ...genMahsul(), ...genGkExtra(), ...genItihas2(), ...genBhugol2(), ...genPairs(),
 ];
 
 // अवैध प्रश्न (एकसारखे पर्याय इ.) वगळा

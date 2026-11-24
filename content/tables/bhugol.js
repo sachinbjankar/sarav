@@ -431,3 +431,5 @@ export function genBhugol() {
     ]),
   ];
 }
+
+export const BHUGOL_TABLES = { DIV, ORIGIN, TRIB, DAM, PARK, HILL, FORT, HOLY, CAVE, STATE, NP, COUNTRY };

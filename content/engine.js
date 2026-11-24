@@ -106,7 +106,7 @@ export function finalize(list) {
   const keys = new Set();
   for (const x of list) {
     const key = `${x.s}|${x.q}|${x.o[0]}`;
-    const qkey = `${x.s}|${x.q}`;
+    const qkey = x.multi ? key : `${x.s}|${x.q}`;
     if (keys.has(key) || keys.has(qkey)) continue;
     keys.add(key); keys.add(qkey);
     out.push([`g${hash(key)}`, x.s, x.q, x.o.map(String), x.e]);
@@ -126,3 +126,32 @@ export function tbl(text, cols) {
 
 // थेट लिहिलेले प्रश्न: [प्रश्न, बरोबर, चूक१, चूक२, चूक३, स्पष्टीकरण]
 export const qa = (subject, list) => list.map(([q, a, d1, d2, d3, e]) => ({ s: subject, q, o: [a, d1, d2, d3], e }));
+
+// MPSC शैलीचे ‘योग्य जोडी / चुकीची जोडी’ प्रश्न (नवीन तथ्ये न घालता, आधीच्या तक्त्यांमधून)
+export function pairs(subject, rows, a, b, label, { fmtA = (v) => v, fmtB = (v) => v, seed = '' } = {}) {
+  const r = rng(`pairs-${subject}-${label}-${seed}`);
+  const good = rows.filter((x) => x[a] && x[b]);
+  const valid = new Map();
+  for (const x of good) { if (!valid.has(x[a])) valid.set(x[a], new Set()); valid.get(x[a]).add(x[b]); }
+  const bs = [...new Set(good.map((x) => x[b]))];
+  if (good.length < 6 || bs.length < 5) return [];
+  const pair = (x, y) => `${fmtA(x)} — ${fmtB(y)}`;
+  const wrongB = (av, avoid = new Set()) => shuffle(r, bs.filter((v) => !valid.get(av).has(v) && !avoid.has(v)))[0];
+  const out = [];
+  good.forEach((row, n) => {
+    const others = shuffle(r, good.filter((o) => o[a] !== row[a] && !valid.get(o[a]).has(row[b]))).slice(0, 3);
+    if (others.length < 3) return;
+    // योग्य जोडी
+    const used = new Set([row[b]]);
+    const wrongs = others.map((o) => { const wb = wrongB(o[a], used); if (wb) used.add(wb); return wb ? pair(o[a], wb) : null; });
+    if (!wrongs.includes(null)) {
+      out.push({ s: subject, multi: true, q: `योग्य जोडी ओळखा (${label}):`, o: [pair(row[a], row[b]), ...wrongs], e: `${fmtA(row[a])} — ${fmtB(row[b])} ही जोडी बरोबर आहे. ${others.map((o) => `${fmtA(o[a])} — ${fmtB(o[b])}`).join('; ')}.` });
+    }
+    // चुकीची जोडी
+    const wb = wrongB(row[a], new Set(others.map((o) => o[b])));
+    if (wb) {
+      out.push({ s: subject, multi: true, q: `चुकीची जोडी ओळखा (${label}):`, o: [pair(row[a], wb), ...others.map((o) => pair(o[a], o[b]))], e: `${fmtA(row[a])} — ${fmtB(wb)} ही जोडी चुकीची; योग्य: ${fmtA(row[a])} — ${fmtB(row[b])}.` });
+    }
+  });
+  return out;
+}

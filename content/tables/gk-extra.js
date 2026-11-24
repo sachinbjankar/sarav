@@ -130,3 +130,5 @@ export function genGkExtra() {
     ...fromTable('itihas', SAINT, { from: 'saint', to: 'place', q: (x) => `${x.saint} यांच्याशी संबंधित ठिकाण कोणते?`, e: (x) => `${x.saint}: ${x.place}.` }),
   ];
 }
+
+export const GKX_TABLES = { DAYS, DANCE, SAINT, NEWDIST };

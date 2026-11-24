@@ -219,3 +219,5 @@ export function genRajya() {
     ]),
   ];
 }
+
+export const RAJYA_TABLES = { ART, SCHED, AMEND, SRC };

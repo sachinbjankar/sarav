@@ -307,15 +307,15 @@ const GENERATED = { ganit: ganitAt, buddhimatta: buddhiAt };
 const getJson = (f) => fetch(`qbank/${f}`).then((r) => (r.ok ? r.json() : [])).catch(() => []);
 
 export async function loadBank() {
-  const seen = new Set(QUESTIONS.map((x) => x.q));
+  const seen = new Set(QUESTIONS.map((x) => `${x.q}|${x.o[0]}`));
   const [tables, gens] = await Promise.all([
     Promise.all(TABLE_SUBJECTS.map((s) => getJson(`${s}.json`))),
     Promise.all(Object.keys(GENERATED).map((s) => getJson(`${s}.idx.json`))),
   ]);
   for (const list of tables) {
     for (const [id, s, q, o, e] of list) {
-      if (seen.has(q)) continue;
-      seen.add(q);
+      if (seen.has(`${q}|${o[0]}`)) continue;
+      seen.add(`${q}|${o[0]}`);
       QUESTIONS.push({ id, s, q, o, e });
     }
   }

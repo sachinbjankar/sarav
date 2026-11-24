@@ -124,3 +124,5 @@ export function genArtha() {
     ]),
   ];
 }
+
+export const ARTHA_TABLES = { INST, SCHEME, TERM };

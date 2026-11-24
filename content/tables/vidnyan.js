@@ -307,3 +307,5 @@ export function genVidnyan() {
     ]),
   ];
 }
+
+export const VIDNYAN_TABLES = { VIT, UNIT, INSTR, FORMULA, ELEM, ACID, DISCOVER, PLANET };

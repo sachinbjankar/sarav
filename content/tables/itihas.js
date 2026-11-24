@@ -359,3 +359,5 @@ export function genItihas() {
     ]),
   ];
 }
+
+export const ITIHAS_TABLES = { ORG, PAPER, BOOK, EVENT, RULER, TITLE, DYN, PLACE };
