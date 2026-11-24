@@ -5,7 +5,7 @@ import '@fontsource/mukta/800.css';
 import './style.css';
 
 import { Capacitor } from '@capacitor/core';
-import { SUBJECTS, EXAMS, QUESTIONS } from './questions.js';
+import { SUBJECTS, EXAMS, QUESTIONS, loadBank } from './questions.js';
 import { store, today } from './store.js';
 import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
@@ -16,7 +16,7 @@ import { DISTRICTS, errText, scoreField } from './backend-common.js';
 const MR = '०१२३४५६७८९';
 const mr = (n) => String(n).replace(/\d/g, (d) => MR[d]);
 const LETTERS = ['अ', 'ब', 'क', 'ड'];
-const byId = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
+let byId = {};
 const subj = Object.fromEntries(SUBJECTS.map((s) => [s.id, s]));
 const examById = Object.fromEntries(EXAMS.map((e) => [e.id, e]));
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -66,9 +66,31 @@ const exam = () => examById[store.get().exam] || EXAMS[0];
 
 // ---------- विषय व प्रश्नसंच ----------
 const baseIds = (sid) => subj[sid].pool || [sid];
-const poolOf = (sid) => { const b = baseIds(sid); return QUESTIONS.filter((q) => b.includes(q.s)); };
+const poolCache = new Map();
+const poolOf = (sid) => {
+  if (!poolCache.has(sid)) { const b = baseIds(sid); poolCache.set(sid, QUESTIONS.filter((q) => b.includes(q.s))); }
+  return poolCache.get(sid);
+};
 const examBase = (e) => [...new Set(e.subjects.flatMap(baseIds))];
-const examPool = (e) => { const b = examBase(e); return QUESTIONS.filter((q) => b.includes(q.s)); };
+const examPool = (e) => {
+  const key = `exam:${e.id}`;
+  if (!poolCache.has(key)) { const b = examBase(e); poolCache.set(key, QUESTIONS.filter((q) => b.includes(q.s))); }
+  return poolCache.get(key);
+};
+
+// परीक्षेच्या सर्व विषयांतून समतोल प्रश्न (गणिताचे प्रश्न जास्त असले तरी)
+function balanced(e, n, rand = Math.random, prefer = true) {
+  const order = shuffle(e.subjects, rand);
+  const used = new Set();
+  const out = [];
+  for (let i = 0; out.length < n && i < n * 4; i++) {
+    const sid = order[i % order.length];
+    const pool = prefer ? prioritised(poolOf(sid), 60) : shuffle(poolOf(sid), rand).slice(0, 60);
+    const q = pool.find((x) => !used.has(x.id));
+    if (q) { used.add(q.id); out.push(q); }
+  }
+  return shuffle(out, rand);
+}
 
 function buildItems(questions, rand = Math.random) {
   return questions.map((q) => {
@@ -77,20 +99,18 @@ function buildItems(questions, rand = Math.random) {
   });
 }
 
-function prioritised(pool) {
+function prioritised(pool, n = QUIZ.PER_TEST) {
   const ans = store.get().ans;
   const unseen = shuffle(pool.filter((q) => !ans[q.id]));
+  if (unseen.length >= n) return unseen.slice(0, n);
   const wrong = shuffle(pool.filter((q) => ans[q.id] && !ans[q.id].last));
   const rest = shuffle(pool.filter((q) => ans[q.id] && ans[q.id].last));
-  return [...unseen, ...wrong, ...rest].slice(0, QUIZ.PER_TEST);
+  return [...unseen, ...wrong, ...rest].slice(0, n);
 }
 
 function dailyQuestions(e) {
   const rand = rng(`daily-${e.id}-${today()}`);
-  const picked = e.subjects.map((sid) => { const p = poolOf(sid); return p[Math.floor(rand() * p.length)]; });
-  const uniq = [...new Set(picked)];
-  const rest = shuffle(examPool(e).filter((q) => !uniq.includes(q)), rand);
-  return buildItems(shuffle([...uniq, ...rest.slice(0, QUIZ.PER_TEST - uniq.length)], rand), rand);
+  return buildItems(balanced(e, QUIZ.PER_TEST, rand, false), rand);
 }
 
 const wrongQuestions = (e) => {
@@ -118,7 +138,7 @@ function startQuiz(mode, sid) {
     items = buildItems(shuffle(store.get().saved.map((id) => byId[id]).filter(Boolean)).slice(0, QUIZ.PER_TEST));
     title = 'जतन केलेले प्रश्न';
   } else {
-    items = buildItems(prioritised(examPool(e)));
+    items = buildItems(balanced(e, QUIZ.PER_TEST));
     title = 'मिश्र सराव चाचणी';
   }
   if (!items.length) return startQuiz('mixed');
@@ -350,12 +370,13 @@ function pickView() {
   </header>
   <main class="wrap pick">
     <h2>${first ? 'तुम्ही कोणत्या परीक्षेची तयारी करत आहात?' : 'परीक्षा बदला'}</h2>
-    <p class="muted">प्रत्येक परीक्षेचे विषय, आजची प्रश्नमंजुषा व रँकिंग वेगळे आहे. नंतर कधीही बदलता येईल.</p>
+    <p class="muted">प्रत्येक परीक्षेचे विषय, आजची प्रश्नमंजुषा व रँकिंग वेगळे आहे. नंतर कधीही बदलता येईल. (परीक्षेचे स्वरूप अधिकृत जाहिरातीनुसार बदलू शकते.)</p>
     ${EXAMS.map((e) => `
       <button class="exam-card ${store.get().exam === e.id ? 'on' : ''}" style="--c:${e.color}" data-act="pick-exam" data-id="${e.id}">
         <span class="ico">${e.icon}</span>
         <span class="grow"><b>${e.name}</b><small>${e.full}</small>
-          <em>${e.subjects.map((s) => subj[s].name).join(' • ')}</em></span>
+          <em>${e.subjects.map((s) => subj[s].name).join(' • ')}</em>
+          <em class="pat">📝 ${e.pattern} • ${mr(examPool(e).length)} सराव प्रश्न</em></span>
         <span class="arrow">›</span>
       </button>`).join('')}
   </main>`;
@@ -617,7 +638,7 @@ function rankView() {
   </header>
   <main class="wrap">
     <div class="exam-tabs">
-      ${EXAMS.map((x) => `<button class="${x.id === e.id ? 'on' : ''}" data-act="rank-exam" data-id="${x.id}">${x.icon} ${x.name}</button>`).join('')}
+      ${EXAMS.map((x) => `<button class="${x.id === e.id ? 'on' : ''}" data-act="rank-exam" data-id="${x.id}">${x.icon} ${x.short}</button>`).join('')}
     </div>
     <div class="seg">
       <button class="${rankPeriod === 'week' ? 'on' : ''}" data-act="rank-period" data-v="week">या आठवड्यात</button>
@@ -676,7 +697,9 @@ function meView() {
       <button class="icon-btn soft" data-act="edit-profile" aria-label="प्रोफाइल बदला">✎</button>
     </section>
     <section class="mini-stats">
-      ${EXAMS.map((x) => `<div><b>${mr(player?.[scoreField(x.id, 'all')] || 0)}</b><span>${x.name} गुण</span></div>`).join('')}
+      <div><b>${mr(player?.[scoreField(e.id, 'all')] || 0)}</b><span>${e.short} गुण</span></div>
+      <div><b>${mr(player?.[scoreField(e.id, 'week')] || 0)}</b><span>या आठवड्यात</span></div>
+      <div><b>${mr(player?.tot || 0)}</b><span>एकूण गुण</span></div>
     </section>` : `
     <section class="auth-card">
       <h2>तुमची प्रगती सुरक्षित ठेवा</h2>
@@ -914,5 +937,10 @@ if (Capacitor.isNativePlatform()) {
   import('@capacitor/app').then(({ App }) => App.addListener('backButton', back));
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') back(); });
-go(store.get().exam ? 'home' : 'pick');
-initAds();
+app.innerHTML = '<div class="splash"><div class="logo">स</div><p>प्रश्नसंच लोड होत आहे…</p></div>';
+loadBank().then(() => {
+  byId = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
+  poolCache.clear();
+  go(store.get().exam ? 'home' : 'pick');
+  initAds();
+});

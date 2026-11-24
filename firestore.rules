@@ -28,7 +28,7 @@ service cloud.firestore {
       let tK = 't_' + e;
       let wK = 'w' + string(week()) + '_' + e;
       let add = d.tot - o.tot;
-      return e in ['mpsc', 'police', 'itar']
+      return e in ['mpsc', 'mpscb', 'police', 'talathi', 'zp']
         && d.diff(o).affectedKeys().hasOnly([tK, wK, 'tot', 'tests', 'last', 'lastExam'])
         && add is int && add >= 0 && add <= 100
         && d.tests == o.tests + 1

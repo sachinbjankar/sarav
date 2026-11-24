@@ -11,19 +11,31 @@ export const SUBJECTS = [
   { id: 'ganit', name: 'अंकगणित', icon: '➗', color: '#5B3FA0' },
   { id: 'buddhimatta', name: 'बुद्धिमत्ता चाचणी', icon: '🧠', color: '#C2410C' },
   { id: 'english', name: 'इंग्रजी व्याकरण', icon: '🔤', color: '#0F766E' },
+  { id: 'panchayat', name: 'पंचायत राज व ग्रामविकास', icon: '🏡', color: '#3F7D20' },
+  { id: 'mahsul', name: 'जमीन महसूल', icon: '📜', color: '#8B5A2B' },
   // खालील दोन विषय इतर विषयांच्या प्रश्नांमधून बनतात (pool)
   { id: 'gk', name: 'सामान्य ज्ञान', icon: '🌏', color: '#4338CA', pool: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan'] },
   { id: 'csat', name: 'CSAT (गणित व बुद्धिमत्ता)', icon: '🧮', color: '#7C3AED', pool: ['ganit', 'buddhimatta'] },
 ];
 
 // परीक्षा विभाग: प्रत्येक परीक्षेचे स्वतःचे विषय, आजची प्रश्नमंजुषा व रँकिंग
+// (स्वरूप: अधिकृत जाहिरातीनुसार बदलू शकते)
 export const EXAMS = [
-  { id: 'mpsc', name: 'MPSC', icon: '🏛️', full: 'राज्यसेवा • संयुक्त पूर्व परीक्षा', color: '#1E2A5A',
+  { id: 'mpsc', name: 'MPSC राज्यसेवा', short: 'राज्यसेवा', icon: '🏛️', full: 'राज्यसेवा पूर्व परीक्षा', color: '#1E2A5A',
+    pattern: 'पेपर १: सामान्य अध्ययन • पेपर २: CSAT • वस्तुनिष्ठ प्रश्न',
     subjects: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'csat'] },
-  { id: 'police', name: 'पोलीस भरती', icon: '👮', full: 'पोलीस शिपाई • चालक • SRPF लेखी परीक्षा', color: '#1D4E89',
+  { id: 'mpscb', name: 'MPSC गट-ब/गट-क', short: 'गट-ब/क', icon: '📘', full: 'संयुक्त पूर्व परीक्षा (PSI, STI, ASO, लिपिक इ.)', color: '#0E5E8C',
+    pattern: '१०० प्रश्न • १ तास • चुकीच्या उत्तराला गुण वजा',
+    subjects: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'ganit', 'buddhimatta', 'marathi', 'english'] },
+  { id: 'police', name: 'पोलीस भरती', short: 'पोलीस', icon: '👮', full: 'पोलीस शिपाई • चालक • SRPF लेखी परीक्षा', color: '#1D4E89',
+    pattern: '१०० प्रश्न • १०० गुण • ९० मिनिटे • प्रत्येक विषय २५ गुण',
     subjects: ['marathi', 'ganit', 'buddhimatta', 'gk'] },
-  { id: 'itar', name: 'इतर भरती', icon: '📋', full: 'तलाठी • ग्रामसेवक • जिल्हा परिषद • आरोग्य भरती', color: '#7A3E12',
-    subjects: ['marathi', 'english', 'gk', 'ganit', 'buddhimatta'] },
+  { id: 'talathi', name: 'तलाठी भरती', short: 'तलाठी', icon: '📜', full: 'तलाठी व महसूल विभाग गट-क', color: '#7A3E12',
+    pattern: '१०० प्रश्न • २०० गुण • २ तास • ऋण गुण नाहीत',
+    subjects: ['marathi', 'english', 'gk', 'ganit', 'buddhimatta', 'mahsul'] },
+  { id: 'zp', name: 'जिल्हा परिषद / ग्रामसेवक', short: 'ZP', icon: '🏘️', full: 'ग्रामसेवक • आरोग्य सेवक • जि.प. गट-क', color: '#2F6B2F',
+    pattern: '१०० प्रश्न • २०० गुण • तांत्रिक प्रश्न पदानुसार',
+    subjects: ['marathi', 'english', 'gk', 'ganit', 'buddhimatta', 'panchayat'] },
 ];
 
 const RAW = {
@@ -283,4 +295,19 @@ const RAW = {
 export const QUESTIONS = [];
 for (const [s, list] of Object.entries(RAW)) {
   list.forEach(([q, o, e], i) => QUESTIONS.push({ id: `${s}-${i + 1}`, s, q, o, e }));
+}
+
+// मोठा प्रश्नसंच (content/build.js ने तयार केलेला) public/qbank/ मधून लोड करा
+const BANK_SUBJECTS = ['ganit', 'buddhimatta', 'itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'marathi', 'english', 'panchayat', 'mahsul'];
+export async function loadBank() {
+  const seen = new Set(QUESTIONS.map((x) => x.q));
+  const lists = await Promise.all(BANK_SUBJECTS.map((s) => fetch(`qbank/${s}.json`).then((r) => (r.ok ? r.json() : [])).catch(() => [])));
+  for (const list of lists) {
+    for (const [id, s, q, o, e] of list) {
+      if (seen.has(q)) continue;
+      seen.add(q);
+      QUESTIONS.push({ id, s, q, o, e });
+    }
+  }
+  return QUESTIONS.length;
 }

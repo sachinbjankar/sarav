@@ -2,7 +2,16 @@
 
 A free Marathi quiz app for MPSC, Police Bharti and other state exams. It earns money from AdMob ads.
 
-**Exam sections:** MPSC, पोलीस भरती and इतर भरती (Talathi, Gramsevak, ZP, health department). Each section has its own subjects, daily quiz and leaderboard. Users choose a section on first launch and can switch from the chip in the header.
+**Exam sections (5):** MPSC राज्यसेवा, MPSC गट-ब/गट-क, पोलीस भरती, तलाठी भरती, जिल्हा परिषद/ग्रामसेवक. Each has its own subjects, exam pattern note, daily quiz and leaderboard. Daily and mixed tests draw evenly from every subject of the exam.
+
+**Question bank (~10,000):**
+- `src/questions.js` holds 225 hand-written questions.
+- `content/` generates the rest into `public/qbank/*.json` (run `npm run questions`):
+  - `gen-ganit.js` and `gen-buddhi.js`: maths and reasoning, with answers computed by code (about 6,300).
+  - `tables/*.js`: fact tables for history, geography, polity, economics, science, Marathi and English, turned into questions (about 3,400). A fact checked once becomes several questions.
+  - `tables/hand.js`: Panchayat Raj and land revenue questions.
+- **Before launch, have a subject expert review the tables in `content/tables/`.** Each table row is a fact; fixing one row fixes every question built from it.
+- Add new facts as rows at the end of a table. Question IDs come from the question text, so editing a question's wording resets users' progress on that question only.
 
 **Features:** a daily quiz per exam, practice by subject (225 questions in 9 base subjects; सामान्य ज्ञान and CSAT draw on several of them), a mixed test, practice of wrong answers, saved questions, a 45-second timer, a 50:50 lifeline, explanations, results with review, and score sharing.
 

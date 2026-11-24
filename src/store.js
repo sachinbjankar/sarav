@@ -17,6 +17,7 @@ let data;
 try {
   data = { ...blank(), ...JSON.parse(localStorage.getItem(KEY) || '{}') };
   if (data.daily && 'date' in data.daily) data.daily = {}; // जुनी रचना
+  if (data.exam === 'itar') data.exam = 'talathi'; // जुना विभाग
 } catch (_) {
   data = blank();
 }
