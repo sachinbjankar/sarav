@@ -297,17 +297,42 @@ for (const [s, list] of Object.entries(RAW)) {
   list.forEach(([q, o, e], i) => QUESTIONS.push({ id: `${s}-${i + 1}`, s, q, o, e }));
 }
 
-// मोठा प्रश्नसंच (content/build.js ने तयार केलेला) public/qbank/ मधून लोड करा
-const BANK_SUBJECTS = ['ganit', 'buddhimatta', 'itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'marathi', 'english', 'panchayat', 'mahsul'];
+// मोठा प्रश्नसंच (content/build.js ने तयार केलेला) public/qbank/ मधून लोड करा.
+// गणित व बुद्धिमत्तेचे प्रश्न फोनवरच तयार होतात: फाइलमध्ये फक्त त्यांचे क्रमांक आहेत.
+import { ganitAt } from '../content/gen-ganit.js';
+import { buddhiAt } from '../content/gen-buddhi.js';
+
+const TABLE_SUBJECTS = ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'marathi', 'english', 'panchayat', 'mahsul'];
+const GENERATED = { ganit: ganitAt, buddhimatta: buddhiAt };
+const getJson = (f) => fetch(`qbank/${f}`).then((r) => (r.ok ? r.json() : [])).catch(() => []);
+
 export async function loadBank() {
   const seen = new Set(QUESTIONS.map((x) => x.q));
-  const lists = await Promise.all(BANK_SUBJECTS.map((s) => fetch(`qbank/${s}.json`).then((r) => (r.ok ? r.json() : [])).catch(() => [])));
-  for (const list of lists) {
+  const [tables, gens] = await Promise.all([
+    Promise.all(TABLE_SUBJECTS.map((s) => getJson(`${s}.json`))),
+    Promise.all(Object.keys(GENERATED).map((s) => getJson(`${s}.idx.json`))),
+  ]);
+  for (const list of tables) {
     for (const [id, s, q, o, e] of list) {
       if (seen.has(q)) continue;
       seen.add(q);
       QUESTIONS.push({ id, s, q, o, e });
     }
   }
+  Object.keys(GENERATED).forEach((s, k) => {
+    for (const i of gens[k]) QUESTIONS.push({ id: `${s}:${i}`, s, n: i, v: true });
+  });
   return QUESTIONS.length;
+}
+
+// आवश्यक तेव्हा पूर्ण प्रश्न तयार करा
+const made = new Map();
+export function full(ref) {
+  if (!ref || !ref.v) return ref;
+  if (made.has(ref.id)) return made.get(ref.id);
+  const x = GENERATED[ref.s](ref.n);
+  const q = { id: ref.id, s: ref.s, q: x.q, o: x.o, e: x.e };
+  if (made.size > 3000) made.clear();
+  made.set(ref.id, q);
+  return q;
 }

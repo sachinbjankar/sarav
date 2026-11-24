@@ -259,3 +259,8 @@ export function genBuddhi(target = 2000) {
   });
   return out;
 }
+
+export function buddhiAt(i) {
+  const x = T[i % T.length](rng(`buddhi:${i}`));
+  return x && new Set(x.o).size === 4 ? x : null;
+}

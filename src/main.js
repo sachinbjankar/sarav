@@ -5,7 +5,7 @@ import '@fontsource/mukta/800.css';
 import './style.css';
 
 import { Capacitor } from '@capacitor/core';
-import { SUBJECTS, EXAMS, QUESTIONS, loadBank } from './questions.js';
+import { SUBJECTS, EXAMS, QUESTIONS, loadBank, full } from './questions.js';
 import { store, today } from './store.js';
 import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
@@ -93,7 +93,7 @@ function balanced(e, n, rand = Math.random, prefer = true) {
 }
 
 function buildItems(questions, rand = Math.random) {
-  return questions.map((q) => {
+  return questions.map(full).map((q) => {
     const order = shuffle([0, 1, 2, 3], rand);
     return { q, opts: order.map((k) => q.o[k]), correct: order.indexOf(0) };
   });
@@ -111,7 +111,22 @@ function difficulty(q) {
 }
 function levelPool(sid) {
   if (!levelCache.has(sid)) {
-    const p = poolOf(sid).slice().sort((a, b) => difficulty(a) - difficulty(b) || (a.id < b.id ? -1 : 1));
+    const groups = {};
+    for (const q of poolOf(sid)) (groups[q.s] ||= []).push(q);
+    const lists = Object.entries(groups).map(([s, list]) => {
+      const gen = list.filter((q) => q.v); // आधीच सोपे → कठीण, गटांत मिसळलेले
+      const fixed = list.filter((q) => !q.v).sort((a, b) => difficulty(a) - difficulty(b) || (a.id < b.id ? -1 : 1));
+      const r = rng(`band-${s}`);
+      const banded = [];
+      for (let k = 0; k < fixed.length; k += 40) banded.push(...shuffle(fixed.slice(k, k + 40), r));
+      // हाताने लिहिलेले प्रश्न सुरुवातीच्या स्तरांत आळीपाळीने
+      const out = [];
+      for (let k = 0; k < Math.max(gen.length, banded.length); k++) { if (k < banded.length) out.push(banded[k]); if (k < gen.length) out.push(gen[k]); }
+      return out;
+    });
+    const p = [];
+    const total = lists.reduce((a, l) => a + l.length, 0);
+    for (let k = 0; p.length < total; k++) for (const l of lists) if (k < l.length) p.push(l[k]);
     levelCache.set(sid, p);
   }
   return levelCache.get(sid);
@@ -641,7 +656,7 @@ function savedView() {
   <main class="wrap">
     ${ids.length ? `
       <button class="btn primary full" data-act="start" data-mode="saved">या प्रश्नांची चाचणी द्या</button>
-      ${ids.map((id) => { const it = buildItems([byId[id]], rng(id))[0]; return reviewCard(it.q, it.opts, it.correct, -2); }).join('')}`
+      ${ids.slice(0, 100).map((id) => { const it = buildItems([byId[id]], rng(id))[0]; return reviewCard(it.q, it.opts, it.correct, -2); }).join('')}`
       : '<div class="empty"><span>☆</span><p>चाचणी देताना ☆ दाबून महत्त्वाचे प्रश्न येथे जतन करा.</p></div>'}
   </main>
   ${tabbar()}`;

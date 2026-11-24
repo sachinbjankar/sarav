@@ -518,3 +518,10 @@ export function genGanit(target = 2000) {
   }
   return out;
 }
+
+// एका क्रमांकावरून नेहमी तोच प्रश्न (ॲपमध्ये मागणीनुसार तयार करण्यासाठी)
+export const GANIT_TEMPLATES = () => T.length;
+export function ganitAt(i) {
+  const x = T[i % T.length](rng(`ganit:${i}`));
+  return x && new Set(x.o).size === 4 ? x : null;
+}
