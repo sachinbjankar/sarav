@@ -13,8 +13,10 @@ export const SUBJECTS = [
   { id: 'english', name: 'इंग्रजी व्याकरण', icon: '🔤', color: '#0F766E' },
   { id: 'panchayat', name: 'पंचायत राज व ग्रामविकास', icon: '🏡', color: '#3F7D20' },
   { id: 'mahsul', name: 'जमीन महसूल', icon: '📜', color: '#8B5A2B' },
+  { id: 'paryavaran', name: 'पर्यावरण व परिस्थितिकी', icon: '🌿', color: '#2F855A' },
+  { id: 'samanya', name: 'सामान्य माहिती', icon: '🏅', color: '#B7791F' },
   // खालील दोन विषय इतर विषयांच्या प्रश्नांमधून बनतात (pool)
-  { id: 'gk', name: 'सामान्य ज्ञान', icon: '🌏', color: '#4338CA', pool: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan'] },
+  { id: 'gk', name: 'सामान्य ज्ञान', icon: '🌏', color: '#4338CA', pool: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'paryavaran', 'samanya'] },
   { id: 'csat', name: 'CSAT (गणित व बुद्धिमत्ता)', icon: '🧮', color: '#7C3AED', pool: ['ganit', 'buddhimatta'] },
 ];
 
@@ -23,10 +25,10 @@ export const SUBJECTS = [
 export const EXAMS = [
   { id: 'mpsc', name: 'MPSC राज्यसेवा', short: 'राज्यसेवा', icon: '🏛️', full: 'राज्यसेवा पूर्व परीक्षा', color: '#1E2A5A',
     pattern: 'पेपर १: सामान्य अध्ययन • पेपर २: CSAT • वस्तुनिष्ठ प्रश्न',
-    subjects: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'csat'] },
+    subjects: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'paryavaran', 'samanya', 'csat'] },
   { id: 'mpscb', name: 'MPSC गट-ब/गट-क', short: 'गट-ब/क', icon: '📘', full: 'संयुक्त पूर्व परीक्षा (PSI, STI, ASO, लिपिक इ.)', color: '#0E5E8C',
     pattern: '१०० प्रश्न • १ तास • चुकीच्या उत्तराला गुण वजा',
-    subjects: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'ganit', 'buddhimatta', 'marathi', 'english'] },
+    subjects: ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'samanya', 'ganit', 'buddhimatta', 'marathi', 'english'] },
   { id: 'police', name: 'पोलीस भरती', short: 'पोलीस', icon: '👮', full: 'पोलीस शिपाई • चालक • SRPF लेखी परीक्षा', color: '#1D4E89',
     pattern: '१०० प्रश्न • १०० गुण • ९० मिनिटे • प्रत्येक विषय २५ गुण',
     subjects: ['marathi', 'ganit', 'buddhimatta', 'gk'] },
@@ -294,33 +296,42 @@ const RAW = {
 
 export const QUESTIONS = [];
 for (const [s, list] of Object.entries(RAW)) {
-  list.forEach(([q, o, e], i) => QUESTIONS.push({ id: `${s}-${i + 1}`, s, q, o, e }));
+  list.forEach(([q, o, e], i) => QUESTIONS.push({ id: `${s}-${i + 1}`, s, q, o, e, lv: 1 }));
 }
 
 // मोठा प्रश्नसंच (content/build.js ने तयार केलेला) public/qbank/ मधून लोड करा.
 // गणित व बुद्धिमत्तेचे प्रश्न फोनवरच तयार होतात: फाइलमध्ये फक्त त्यांचे क्रमांक आहेत.
 import { ganitAt } from '../content/gen-ganit.js';
 import { buddhiAt } from '../content/gen-buddhi.js';
+import { examAt, SPECS } from '../content/gen-exam.js';
 
-const TABLE_SUBJECTS = ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'marathi', 'english', 'panchayat', 'mahsul'];
+const TABLE_SUBJECTS = ['itihas', 'bhugol', 'rajyaghatana', 'arthashastra', 'vidnyan', 'marathi', 'english', 'panchayat', 'mahsul', 'paryavaran', 'samanya'];
+const CX = Object.keys(SPECS);
 const GENERATED = { ganit: ganitAt, buddhimatta: buddhiAt };
 const getJson = (f) => fetch(`qbank/${f}`).then((r) => (r.ok ? r.json() : [])).catch(() => []);
 
 export async function loadBank() {
   const seen = new Set(QUESTIONS.map((x) => `${x.q}|${x.o[0]}`));
-  const [tables, gens] = await Promise.all([
+  const [tables, gens, cxs] = await Promise.all([
     Promise.all(TABLE_SUBJECTS.map((s) => getJson(`${s}.json`))),
     Promise.all(Object.keys(GENERATED).map((s) => getJson(`${s}.idx.json`))),
+    Promise.all(CX.map((s) => getJson(`${s}.cx.json`))),
   ]);
   for (const list of tables) {
     for (const [id, s, q, o, e] of list) {
       if (seen.has(`${q}|${o[0]}`)) continue;
       seen.add(`${q}|${o[0]}`);
-      QUESTIONS.push({ id, s, q, o, e });
+      QUESTIONS.push({ id, s, q, o, e, lv: q.includes('जोडी') ? 2 : 1 });
     }
   }
+  // गणित/बुद्धिमत्ता: क्रमांकांची यादी सोप्याकडून कठीणकडे → तीन स्तर
   Object.keys(GENERATED).forEach((s, k) => {
-    for (const i of gens[k]) QUESTIONS.push({ id: `${s}:${i}`, s, n: i, v: true });
+    const list = gens[k];
+    list.forEach((i, pos) => QUESTIONS.push({ id: `${s}:${i}`, s, n: i, v: true, g: s, lv: 1 + Math.floor((pos * 3) / list.length) }));
+  });
+  // परीक्षा-स्वरूप प्रश्न (स्तर २ व ३)
+  CX.forEach((s, k) => {
+    for (const lv of [2, 3]) for (const i of (cxs[k][lv] || [])) QUESTIONS.push({ id: `cx:${s}:${i}`, s, n: i, v: true, g: 'cx', lv });
   });
   return QUESTIONS.length;
 }
@@ -330,8 +341,8 @@ const made = new Map();
 export function full(ref) {
   if (!ref || !ref.v) return ref;
   if (made.has(ref.id)) return made.get(ref.id);
-  const x = GENERATED[ref.s](ref.n);
-  const q = { id: ref.id, s: ref.s, q: x.q, o: x.o, e: x.e };
+  const x = ref.g === 'cx' ? examAt(ref.s, ref.n) : GENERATED[ref.s](ref.n);
+  const q = { id: ref.id, s: ref.s, q: x.q, o: x.o, e: x.e, lv: ref.lv };
   if (made.size > 3000) made.clear();
   made.set(ref.id, q);
   return q;

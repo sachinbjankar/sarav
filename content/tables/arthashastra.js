@@ -126,3 +126,5 @@ export function genArtha() {
 }
 
 export const ARTHA_TABLES = { INST, SCHEME, TERM };
+
+export const ALL = { INST, PLAN, SCHEME, COMM, TERM, TAX };

@@ -576,3 +576,5 @@ export function genMarathi() {
     ]),
   ];
 }
+
+export const ALL = { IDIOM, PROV, GENDER, SAMAS, ONEWORD, LIT, PEN, JATI, KAL };

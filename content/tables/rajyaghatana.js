@@ -221,3 +221,5 @@ export function genRajya() {
 }
 
 export const RAJYA_TABLES = { ART, SCHED, AMEND, SRC };
+
+export const ALL = { ART, SCHED, AMEND, SRC, WRIT };

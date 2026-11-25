@@ -361,3 +361,5 @@ export function genItihas() {
 }
 
 export const ITIHAS_TABLES = { ORG, PAPER, BOOK, EVENT, RULER, TITLE, DYN, PLACE };
+
+export const ALL = { ORG, PAPER, BOOK, EVENT, RULER, TITLE, SLOGAN, SONG, DYN, ASHTA, PESHWA, PLACE };

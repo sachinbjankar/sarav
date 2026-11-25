@@ -383,3 +383,5 @@ export function genEnglish() {
     ]),
   ];
 }
+
+export const ALL = { VERB, PLURAL, ONEW, IDIOMS, GENDER };

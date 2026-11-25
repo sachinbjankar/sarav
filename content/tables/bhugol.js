@@ -433,3 +433,5 @@ export function genBhugol() {
 }
 
 export const BHUGOL_TABLES = { DIV, ORIGIN, TRIB, DAM, PARK, HILL, FORT, HOLY, CAVE, STATE, NP, COUNTRY };
+
+export const ALL = { DIV, ORIGIN, TRIB, DAM, RESV, PARK, HILL, FORT, HOLY, CAVE, FAME, GHAT, STATE, NP, PASS, COUNTRY };

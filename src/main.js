@@ -17,7 +17,7 @@ import { DISTRICTS, errText, scoreField } from './backend-common.js';
 // ---------- मदतनीस ----------
 const MR = '०१२३४५६७८९';
 const mr = (n) => String(n).replace(/\d/g, (d) => MR[d]);
-const LETTERS = ['अ', 'ब', 'क', 'ड'];
+const LETTERS = ['१', '२', '३', '४'];
 let byId = {};
 const subj = Object.fromEntries(SUBJECTS.map((s) => [s.id, s]));
 const examById = Object.fromEntries(EXAMS.map((e) => [e.id, e]));
@@ -80,19 +80,73 @@ const examPool = (e) => {
   return poolCache.get(key);
 };
 
-// परीक्षेच्या सर्व विषयांतून समतोल प्रश्न (गणिताचे प्रश्न जास्त असले तरी)
+// परीक्षेनुसार काठिण्य: [स्तर १, स्तर २, स्तर ३] चे प्रमाण
+const LV_MIX = {
+  mpsc: [0.15, 0.3, 0.55],   // राज्यसेवा: विधानांवर आधारित कठीण प्रश्न जास्त
+  mpscb: [0.35, 0.35, 0.3],
+  police: [0.65, 0.25, 0.1],
+  talathi: [0.6, 0.3, 0.1],
+  zp: [0.6, 0.3, 0.1],
+};
+const lvPool = (sid, lv) => {
+  const key = `${sid}#${lv}`;
+  if (!poolCache.has(key)) poolCache.set(key, poolOf(sid).filter((q) => (q.lv || 1) === lv));
+  return poolCache.get(key);
+};
+function drawLv(e, rand) {
+  const w = LV_MIX[e.id] || [0.5, 0.3, 0.2];
+  let x = rand() * (w[0] + w[1] + w[2]);
+  for (let k = 0; k < 3; k++) { x -= w[k]; if (x <= 0) return k + 1; }
+  return 3;
+}
+// एका विषयातून परीक्षेच्या काठिण्यानुसार एक प्रश्न
+function pickOne(e, sid, used, rand, prefer) {
+  for (let t = 0; t < 3; t++) {
+    const lv = drawLv(e, rand);
+    const pool = lvPool(sid, lv).length ? lvPool(sid, lv) : poolOf(sid);
+    const cand = prefer ? prioritised(sampleOf(pool, 300, rand), 40) : sampleOf(pool, 40, rand);
+    const q = cand.find((x) => !used.has(x.id));
+    if (q) return q;
+  }
+  return null;
+}
+// मोठ्या यादीतून झटपट नमुना
+function sampleOf(pool, n, rand = Math.random) {
+  if (pool.length <= n) return shuffle(pool, rand);
+  const out = new Set();
+  while (out.size < n) out.add(pool[Math.floor(rand() * pool.length)]);
+  return [...out];
+}
+
+// परीक्षेच्या सर्व विषयांतून समतोल प्रश्न
 function balanced(e, n, rand = Math.random, prefer = true) {
   const order = shuffle(e.subjects, rand);
   const used = new Set();
   const out = [];
   for (let i = 0; out.length < n && i < n * 4; i++) {
-    const sid = order[i % order.length];
-    const pool = prefer ? prioritised(poolOf(sid), 60) : shuffle(poolOf(sid), rand).slice(0, 60);
-    const q = pool.find((x) => !used.has(x.id));
+    const q = pickOne(e, order[i % order.length], used, rand, prefer);
     if (q) { used.add(q.id); out.push(q); }
   }
   return shuffle(out, rand);
 }
+function fromSubject(e, sid, n, rand = Math.random) {
+  const used = new Set();
+  const out = [];
+  for (let i = 0; out.length < n && i < n * 4; i++) {
+    const q = pickOne(e, sid, used, rand, true);
+    if (q) { used.add(q.id); out.push(q); }
+  }
+  return out;
+}
+
+// सराव पेपर: प्रत्यक्ष परीक्षेसारखी विषयनिहाय प्रश्नसंख्या (अंदाजे) व एकूण वेळ
+const MOCK = {
+  mpsc: { mins: 120, neg: 0.25, note: 'सामान्य अध्ययन पेपर १ (२०२३ च्या पेपरनुसार विभागणी)', mix: { itihas: 15, paryavaran: 7, bhugol: 13, vidnyan: 20, arthashastra: 15, rajyaghatana: 15, samanya: 15 } },
+  mpscb: { mins: 60, neg: 0.25, note: 'संयुक्त पूर्व परीक्षेसारखा (अंदाजे विभागणी)', mix: { itihas: 13, bhugol: 13, rajyaghatana: 13, arthashastra: 12, vidnyan: 13, samanya: 12, ganit: 12, buddhimatta: 12 } },
+  police: { mins: 90, neg: 0, note: 'प्रत्येक विषय २५ प्रश्न', mix: { marathi: 25, ganit: 25, buddhimatta: 25, gk: 25 } },
+  talathi: { mins: 120, neg: 0, note: 'मराठी, इंग्रजी, सामान्य ज्ञान, बौद्धिक चाचणी (प्रत्येकी २५)', mix: { marathi: 25, english: 25, gk: 20, mahsul: 5, ganit: 12, buddhimatta: 13 } },
+  zp: { mins: 120, neg: 0, note: 'मराठी, इंग्रजी, सामान्य ज्ञान, बौद्धिक चाचणी (प्रत्येकी २५)', mix: { marathi: 25, english: 25, gk: 20, panchayat: 5, ganit: 12, buddhimatta: 13 } },
+};
 
 function buildItems(questions, rand = Math.random) {
   return questions.map(full).map((q) => {
@@ -116,14 +170,18 @@ function levelPool(sid) {
     const groups = {};
     for (const q of poolOf(sid)) (groups[q.s] ||= []).push(q);
     const lists = Object.entries(groups).map(([s, list]) => {
-      const gen = list.filter((q) => q.v); // आधीच सोपे → कठीण, गटांत मिसळलेले
-      const fixed = list.filter((q) => !q.v).sort((a, b) => difficulty(a) - difficulty(b) || (a.id < b.id ? -1 : 1));
-      const r = rng(`band-${s}`);
-      const banded = [];
-      for (let k = 0; k < fixed.length; k += 40) banded.push(...shuffle(fixed.slice(k, k + 40), r));
-      // हाताने लिहिलेले प्रश्न सुरुवातीच्या स्तरांत आळीपाळीने
       const out = [];
-      for (let k = 0; k < Math.max(gen.length, banded.length); k++) { if (k < banded.length) out.push(banded[k]); if (k < gen.length) out.push(gen[k]); }
+      // स्तर १ → २ → ३: सोप्याकडून परीक्षा-स्वरूप कठीण प्रश्नांकडे
+      for (const lv of [1, 2, 3]) {
+        const part = list.filter((q) => (q.lv || 1) === lv);
+        const gen = part.filter((q) => q.v);
+        const fixed = part.filter((q) => !q.v).sort((a, b) => difficulty(a) - difficulty(b) || (a.id < b.id ? -1 : 1));
+        const r = rng(`band-${s}-${lv}`);
+        const banded = [];
+        for (let k = 0; k < fixed.length; k += 40) banded.push(...shuffle(fixed.slice(k, k + 40), r));
+        const genMix = gen.length > 400 && gen[0].g === 'cx' ? shuffle(gen, r) : gen;
+        for (let k = 0; k < Math.max(genMix.length, banded.length); k++) { if (k < banded.length) out.push(banded[k]); if (k < genMix.length) out.push(genMix[k]); }
+      }
       return out;
     });
     const p = [];
@@ -182,8 +240,17 @@ function startQuiz(mode, sid, lvl) {
     title = 'आजची प्रश्नमंजुषा';
     retry = store.dailyFor(e.id).date === today();
   } else if (mode === 'subject') {
-    items = buildItems(prioritised(poolOf(sid)));
+    items = buildItems(fromSubject(e, sid, QUIZ.PER_TEST));
     title = subj[sid].name;
+  } else if (mode === 'mock') {
+    const m = MOCK[e.id];
+    const used = new Set();
+    const qs = [];
+    for (const [s2, n] of Object.entries(m.mix)) {
+      for (const q of fromSubject(e, s2, n)) if (!used.has(q.id)) { used.add(q.id); qs.push(q); }
+    }
+    items = buildItems(qs);
+    title = `${e.short} सराव पेपर`;
   } else if (mode === 'wrong') {
     items = buildItems(shuffle(wrongQuestions(e)).slice(0, QUIZ.PER_TEST));
     title = 'चुकलेल्या प्रश्नांचा सराव';
@@ -197,8 +264,10 @@ function startQuiz(mode, sid, lvl) {
   if (!items.length) return startQuiz('mixed');
   // रँकिंगचे गुण: आजची प्रश्नमंजुषा (पहिल्यांदा), विषय चाचणी व मिश्र चाचणी
   const ranked = (mode === 'daily' && !retry) || (mode === 'level' && !retry) || mode === 'subject' || mode === 'mixed';
+  const mock = mode === 'mock' ? MOCK[e.id] : null;
   quiz = {
-    mode, sid, title, items, retry, ranked, exam: e.id, lvl: Number(lvl),
+    mode, sid, title, items, retry, ranked, exam: e.id, lvl: Number(lvl), mock,
+    deadline: mock ? Date.now() + mock.mins * 60000 : 0,
     i: 0,
     answers: items.map(() => null),
     removed: items.map(() => []),
@@ -209,7 +278,19 @@ function startQuiz(mode, sid, lvl) {
   go('quiz');
 }
 
+const clock = (ms) => { const t = Math.max(0, Math.round(ms / 1000)); const h = Math.floor(t / 3600); const m = Math.floor((t % 3600) / 60); const sec = t % 60; return `${h ? `${mr(h)}:` : ''}${mr(String(m).padStart(h ? 2 : 1, '0'))}:${mr(String(sec).padStart(2, '0'))}`; };
 function startTimer() {
+  if (quiz && quiz.mock) {
+    if (timer) return;
+    timer = setInterval(() => {
+      if (!quiz || !quiz.mock) return stopTimer();
+      const left = quiz.deadline - Date.now();
+      const el = document.getElementById('timer');
+      if (el) el.textContent = clock(left);
+      if (left <= 0) { stopTimer(); toast('वेळ संपली — पेपर जमा केला'); finish(); }
+    }, 1000);
+    return;
+  }
   stopTimer();
   quiz.left = QUIZ.SECONDS_PER_Q;
   timer = setInterval(() => {
@@ -228,6 +309,12 @@ function stopTimer() { if (timer) clearInterval(timer); timer = null; }
 function startTimerKeep() { const keep = quiz.left; startTimer(); quiz.left = keep; }
 
 function answer(choice) {
+  if (quiz && quiz.mock) {
+    const it = quiz.items[quiz.i];
+    quiz.answers[quiz.i] = { choice, ok: choice === it.correct };
+    render(true);
+    return;
+  }
   if (!quiz || quiz.answers[quiz.i]) return;
   stopTimer();
   const it = quiz.items[quiz.i];
@@ -260,12 +347,23 @@ async function useFifty() {
   render(true);
 }
 
-function next() {
-  if (quiz.i < quiz.items.length - 1) { quiz.i++; go('quiz'); } else finish();
+async function next() {
+  if (quiz.i < quiz.items.length - 1) { quiz.i++; go('quiz'); return; }
+  if (quiz.mock) {
+    const left = quiz.answers.filter((a) => !a).length;
+    if (!(await confirmBox(left ? `${mr(left)} प्रश्न अजून सोडवायचे आहेत. पेपर जमा करायचा?` : 'पेपर जमा करायचा?', 'हो, जमा करा', 'नाही'))) return;
+  }
+  finish();
 }
+function prev() { if (quiz && quiz.i > 0) { quiz.i--; go('quiz'); } }
 
 async function finish() {
   stopTimer();
+  if (quiz.mock) {
+    quiz.items.forEach((it, k) => { const a = quiz.answers[k]; if (a) store.record(it.q.id, a.ok); });
+    const wrongN = quiz.answers.filter((a) => a && !a.ok).length;
+    quiz.net = Math.round((quiz.answers.filter((a) => a && a.ok).length - wrongN * quiz.mock.neg) * 100) / 100;
+  }
   const score = quiz.answers.filter((a) => a && a.ok).length;
   quiz.score = score;
   quiz.secs = Math.round((Date.now() - quiz.started) / 1000);
@@ -504,6 +602,10 @@ function homeView() {
       </button>
     </div>
 
+    <button class="mock-strip" data-act="mock-info">
+      <span class="ex-ico">📝</span><span class="grow"><b>पूर्ण सराव पेपर</b><small>१०० प्रश्न • ${mr(MOCK[e.id].mins)} मिनिटे • खऱ्या परीक्षेसारखा</small></span><span class="arrow">›</span>
+    </button>
+
     <h3 class="sec">${e.name} • विषयानुसार सराव</h3>
     <section class="subjects">
       ${e.subjects.map((sid) => {
@@ -523,7 +625,39 @@ function homeView() {
   ${tabbar()}`;
 }
 
+function mockView(animate) {
+  const it = quiz.items[quiz.i];
+  const a = quiz.answers[quiz.i];
+  const s = subj[it.q.s];
+  const done = quiz.answers.filter(Boolean).length;
+  const last = quiz.i === quiz.items.length - 1;
+  return `
+  <header class="qtop">
+    <button class="icon-btn" data-act="exit" aria-label="बाहेर">✕</button>
+    <div class="qprog"><i style="width:${(done / quiz.items.length) * 100}%"></i></div>
+    <div class="mock-clock">⏱ <span id="timer">${clock(quiz.deadline - Date.now())}</span></div>
+  </header>
+  <main class="wrap quiz ${animate ? 'enter' : ''}">
+    <div class="qmeta">
+      <span class="tag" style="--c:${s.color}">${s.icon} ${s.name}</span>
+      <span>प्रश्न ${mr(quiz.i + 1)}/${mr(quiz.items.length)} • सोडवले ${mr(done)}</span>
+    </div>
+    <h2 class="qtext">${esc(it.q.q)}</h2>
+    <div class="opts">
+      ${it.opts.map((o, k) => `<button class="opt ${a && a.choice === k ? 'picked' : ''}" data-act="ans" data-k="${k}">
+          <span class="l">${LETTERS[k]}</span><span class="t">${esc(o)}</span></button>`).join('')}
+    </div>
+    <div class="qactions three">
+      <button class="btn ghost" data-act="prev" ${quiz.i ? '' : 'disabled'}>← मागील</button>
+      <button class="btn ghost" data-act="save" aria-label="जतन करा">${store.isSaved(it.q.id) ? '⭐' : '☆'}</button>
+      <button class="btn primary" data-act="next">${last ? 'पेपर जमा करा' : a ? 'पुढील →' : 'सोडा →'}</button>
+    </div>
+    ${quiz.mock.neg ? `<p class="muted small center">चुकीच्या उत्तराला ${mr(quiz.mock.neg)} गुण वजा • उत्तर बदलता येते</p>` : '<p class="muted small center">उत्तर बदलता येते • निकाल शेवटी</p>'}
+  </main>`;
+}
+
 function quizView(animate = true) {
+  if (quiz.mock) return mockView(animate);
   const it = quiz.items[quiz.i];
   const a = quiz.answers[quiz.i];
   const removed = quiz.removed[quiz.i];
@@ -573,7 +707,7 @@ function quizView(animate = true) {
 function resultView() {
   const total = quiz.items.length;
   const wrong = quiz.answers.filter((a) => a && !a.ok && a.choice !== -1).length;
-  const skipped = quiz.answers.filter((a) => a && a.choice === -1).length;
+  const skipped = quiz.answers.filter((a) => !a || a.choice === -1).length;
   const pct = Math.round((quiz.score / total) * 100);
   const msg = pct >= 80 ? 'उत्कृष्ट! असाच सराव सुरू ठेवा 💪' : pct >= 50 ? 'छान! थोडा अजून सराव करा.' : 'हरकत नाही, चुकलेले प्रश्न पुन्हा सोडवा.';
   const min = Math.floor(quiz.secs / 60);
@@ -606,9 +740,10 @@ function resultView() {
       <div class="mini-stats in">
         <div><b class="g">${mr(quiz.score)}</b><span>बरोबर</span></div>
         <div><b class="r">${mr(wrong)}</b><span>चूक</span></div>
-        <div><b>${mr(skipped)}</b><span>वेळ संपली</span></div>
+        <div><b>${mr(skipped)}</b><span>${quiz.mock ? 'सोडलेले' : 'वेळ संपली'}</span></div>
         <div><b>${mr(min)}:${mr(String(sec).padStart(2, '0'))}</b><span>वेळ</span></div>
       </div>
+      ${quiz.mock ? `<div class="xp-note">📝 ${quiz.mock.neg ? `ऋण गुणांसह निव्वळ गुण: <b>${mr(quiz.net)}</b>/${mr(total)}` : `गुण: <b>${mr(quiz.score)}</b>/${mr(total)}`}</div>` : ''}
       ${xpLine}
       ${ptsLine}
     </section>
@@ -1050,10 +1185,17 @@ document.addEventListener('click', async (e) => {
   if (el.classList.contains('disabled')) return;
 
   switch (act) {
+    case 'mock-info': {
+      const m = MOCK[exam().id];
+      const ok = await confirmBox(`${exam().name} सराव पेपर\n\n• १०० प्रश्न, ${mr(m.mins)} मिनिटे\n• ${m.note}\n${m.neg ? `• चुकीच्या उत्तराला ${mr(m.neg)} गुण वजा\n` : ''}• निकाल व स्पष्टीकरण शेवटी`, 'पेपर सुरू करा', 'नंतर');
+      if (ok) startQuiz('mock');
+      return;
+    }
     case 'start': return startQuiz(el.dataset.mode, el.dataset.sid, el.dataset.lvl);
     case 'path': pathSid = el.dataset.sid; quiz = view === 'result' ? null : quiz; go('path'); return scrollToCurrent();
     case 'ans': return answer(Number(el.dataset.k));
     case 'next': return next();
+    case 'prev': return prev();
     case 'fifty': return useFifty();
     case 'exit':
     case 'back': return back();

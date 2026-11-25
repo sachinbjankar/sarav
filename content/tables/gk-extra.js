@@ -132,3 +132,5 @@ export function genGkExtra() {
 }
 
 export const GKX_TABLES = { DAYS, DANCE, SAINT, NEWDIST };
+
+export const ALL = { DAYS, SYMBOL, NEWDIST, STATEYR, DANCE, SAINT };
