@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">सराव</string>
-    <string name="title_activity_main">सराव</string>
+    <string name="app_name">सराव Sarav</string>
+    <string name="title_activity_main">सराव Sarav</string>
     <string name="package_name">in.sachivapps.sarav</string>
     <string name="custom_url_scheme">in.sachivapps.sarav</string>
-    <!-- AdMob App ID: खाते तयार झाल्यावर स्वतःचा ID टाका (आत्ता Google test ID) -->
+    <!-- AdMob App ID (Sachiv Apps) -->
     <string name="admob_app_id">ca-app-pub-4684655036811137~4907313832</string>
 </resources>
