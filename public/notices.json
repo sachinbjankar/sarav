@@ -1,0 +1,85 @@
+{
+  "updated": "2026-11-25",
+  "items": [
+    {
+      "id": "grc-2026-apply",
+      "exams": ["mpscb", "talathi"],
+      "title": "गट-क (तलाठीसह) — अर्ज/शुल्क शेवटची तारीख",
+      "date": "2026-11-27",
+      "kind": "deadline",
+      "status": "fixed",
+      "note": "६ नोव्हेंबर २०२६ च्या शुद्धिपत्रकानुसार अर्ज पुन्हा सुरू (१३ ते २७ नोव्हें.). जाहिरात क्र. ०१७/२०२६. शुल्क भरण्याची अंतिम तारीख सुमारे ३० नोव्हें. — अधिकृत जाहिरात पाहा.",
+      "link": "https://mpsconline.gov.in/candidate"
+    },
+    {
+      "id": "grc-2026-pre",
+      "exams": ["mpscb", "talathi"],
+      "title": "MPSC गट-क संयुक्त पूर्व परीक्षा २०२६ (तलाठी १,८४० पदांसह)",
+      "date": "2027-01-24",
+      "kind": "exam",
+      "status": "fixed",
+      "note": "सर्व जिल्हा केंद्रांवर, OMR (ऑफलाइन) पद्धतीने. एकूण सुमारे १६,७०० पदे. ही तारीख आधी तीन वेळा बदलली आहे — प्रवेशपत्र साधारण एक आठवडा आधी.",
+      "link": "https://mpsc.gov.in"
+    },
+    {
+      "id": "rajya-2026-mains",
+      "exams": ["mpsc"],
+      "title": "राज्यसेवा मुख्य परीक्षा २०२६",
+      "date": null,
+      "kind": "exam",
+      "status": "postponed",
+      "note": "मूळ ३ ते २४ ऑक्टो. २०२६ — २८ सप्टें. २०२६ च्या सूचनेनुसार पुढे ढकलली. नवीन तारीख जाहीर झालेली नाही.",
+      "link": "https://mpsc.gov.in"
+    },
+    {
+      "id": "grb-2026-mains",
+      "exams": ["mpscb"],
+      "title": "गट-ब (अराजपत्रित) संयुक्त मुख्य परीक्षा २०२६",
+      "date": null,
+      "kind": "exam",
+      "status": "postponed",
+      "note": "मूळ ५ डिसें. २०२६ — २८ सप्टें. २०२६ च्या सूचनेनुसार पुढे ढकलली. नवीन तारीख जाहीर झालेली नाही.",
+      "link": "https://mpsc.gov.in"
+    },
+    {
+      "id": "grc-2026-mains",
+      "exams": ["mpscb", "talathi"],
+      "title": "गट-क संयुक्त मुख्य परीक्षा २०२६",
+      "date": null,
+      "kind": "exam",
+      "status": "tba",
+      "note": "पूर्व परीक्षा २४ जाने. २०२७ ला असल्याने मुख्य परीक्षेची नवीन तारीख अजून जाहीर नाही.",
+      "link": "https://mpsc.gov.in"
+    },
+    {
+      "id": "mpsc-2027-calendar",
+      "exams": ["mpsc", "mpscb"],
+      "title": "MPSC वार्षिक वेळापत्रक २०२७",
+      "date": null,
+      "kind": "notice",
+      "status": "tba",
+      "note": "अजून प्रसिद्ध झालेले नाही. २०२६ चे वेळापत्रक १७ ऑक्टो. २०२५ ला आले होते.",
+      "link": "https://mpsc.gov.in"
+    },
+    {
+      "id": "police-next",
+      "exams": ["police"],
+      "title": "पोलीस शिपाई भरती — पुढील जाहिरात",
+      "date": null,
+      "kind": "notice",
+      "status": "tba",
+      "note": "२०२५-२६ ची भरती (सुमारे १५,६०० पदे) घटकनिहाय पूर्ण होत आहे. पुढील भरतीची जाहिरात आल्यावर येथे कळवू.",
+      "link": "https://mahapolice.gov.in"
+    },
+    {
+      "id": "zp-next",
+      "exams": ["zp"],
+      "title": "जिल्हा परिषद भरती",
+      "date": null,
+      "kind": "notice",
+      "status": "tba",
+      "note": "अधिकृत जाहिरात, अर्जाच्या तारखा अजून जाहीर झालेल्या नाहीत.",
+      "link": "https://rdd.maharashtra.gov.in"
+    }
+  ]
+}

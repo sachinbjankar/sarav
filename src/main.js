@@ -8,6 +8,7 @@ import { Capacitor } from '@capacitor/core';
 import { SUBJECTS, EXAMS, QUESTIONS, loadBank, full } from './questions.js';
 import { store, today } from './store.js';
 import { OWL_SVG, greeting, motto } from './mascot.js';
+import { loadNotices, noticesFor, nextFor, noticesUpdated } from './notices.js';
 import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded, adStatus } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
 import { backend } from './backend.js';
@@ -480,6 +481,8 @@ function homeView() {
       </div>
       <button class="btn light" data-act="start" data-mode="daily">${doneToday ? 'पुन्हा सोडवा' : 'सुरू करा'}</button>
     </section>
+
+    ${examStrip(e)}
 
     ${user ? '' : `
     <button class="join-strip" data-act="tab" data-v="auth">
@@ -972,13 +975,58 @@ function pathView() {
   ${tabbar()}`;
 }
 
+
+// ---------- परीक्षा व सूचना ----------
+const isoMr = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${mr(d)} ${MONTHS[m - 1]} ${mr(y)}`; };
+const leftMr = (n) => (n === 0 ? 'आज!' : n === 1 ? 'उद्या' : `${mr(n)} दिवस बाकी`);
+function examStrip(e) {
+  const n = nextFor(e.id);
+  const sub = n ? `${esc(n.title)}` : 'आगामी परीक्षा, बदललेल्या तारखा व सूचना';
+  const right = n ? `<span class="ex-left ${n.left <= 7 ? 'soon' : ''}">${leftMr(n.left)}</span>` : '<span class="arrow">›</span>';
+  return `<button class="exam-strip" data-act="tab" data-v="exams">
+    <span class="ex-ico">📅</span><span class="grow"><b>परीक्षा व सूचना</b><small>${sub}</small></span>${right}
+  </button>`;
+}
+function noticeCard(x) {
+  const badge = x.status === 'postponed' ? '<span class="nb warn">पुढे ढकलली</span>'
+    : x.status === 'tba' ? '<span class="nb">तारीख जाहीर नाही</span>'
+    : x.kind === 'deadline' ? '<span class="nb hot">शेवटची तारीख</span>' : '<span class="nb ok">तारीख निश्चित</span>';
+  const when = x.date ? `<div class="n-date">🗓️ ${isoMr(x.date)}${x.left !== null && x.left >= 0 ? ` • <b>${leftMr(x.left)}</b>` : x.left < 0 ? ' • झाली' : ''}</div>` : '';
+  return `<article class="notice ${x.left !== null && x.left >= 0 && x.left <= 7 ? 'urgent' : ''}">
+    <div class="n-top">${badge}</div>
+    <h3>${esc(x.title)}</h3>${when}
+    <p>${esc(x.note || '')}</p>
+    ${x.link ? `<a class="n-link" href="${esc(x.link)}" target="_blank" rel="noopener">अधिकृत संकेतस्थळ ↗</a>` : ''}
+  </article>`;
+}
+let examsAll = false;
+function examsView() {
+  const e = exam();
+  const { upcoming, tba, past } = noticesFor(examsAll ? null : e.id);
+  const upd = noticesUpdated();
+  return `
+  <header class="top slim"><h1>📅 परीक्षा व सूचना</h1></header>
+  <main class="wrap">
+    <div class="seg">
+      <button class="${examsAll ? '' : 'on'}" data-act="exams-scope" data-all="0">${esc(e.name)}</button>
+      <button class="${examsAll ? 'on' : ''}" data-act="exams-scope" data-all="1">सर्व परीक्षा</button>
+    </div>
+    ${upcoming.length ? `<h2 class="sec">आगामी</h2>${upcoming.map(noticeCard).join('')}` : ''}
+    ${tba.length ? `<h2 class="sec">पुढे ढकललेल्या / जाहीर होणाऱ्या</h2>${tba.map(noticeCard).join('')}` : ''}
+    ${past.length ? `<h2 class="sec">झालेल्या</h2>${past.map(noticeCard).join('')}` : ''}
+    ${!upcoming.length && !tba.length && !past.length ? '<p class="muted">या परीक्षेसाठी सध्या कोणतीही सूचना नाही.</p>' : ''}
+    <p class="muted small n-disc">⚠️ तारखा आयोगाच्या सूचनांनुसार बदलू शकतात. अर्ज करण्यापूर्वी अधिकृत संकेतस्थळावर (mpsc.gov.in, mahapolice.gov.in) खात्री करा. सराव हे स्वतंत्र अ‍ॅप आहे; कोणत्याही शासकीय संस्थेशी संबंधित नाही.${upd ? `<br>शेवटचे अद्ययावत: ${isoMr(upd)}` : ''}</p>
+  </main>
+  ${tabbar()}`;
+}
+
 let booted = false;
 function render(keepAnim = false) {
   if (!booted) return;
   if (!store.get().exam && view !== 'pick') view = 'pick';
   const views = {
     pick: pickView, home: homeView, path: pathView, quiz: () => quizView(!keepAnim), result: resultView, review: reviewView,
-    saved: savedView, rank: rankView, me: meView, auth: authView,
+    saved: savedView, rank: rankView, me: meView, auth: authView, exams: examsView,
   };
   app.innerHTML = (views[view] || homeView)();
   app.dataset.view = view;
@@ -1009,6 +1057,10 @@ document.addEventListener('click', async (e) => {
     case 'fifty': return useFifty();
     case 'exit':
     case 'back': return back();
+    case 'exams-scope':
+      examsAll = el.dataset.all === '1';
+      render();
+      break;
     case 'tab':
       if (view === 'result') quiz = null;
       if (el.dataset.v === 'auth') { authMode = 'signup'; authMsg = ''; }
@@ -1074,6 +1126,7 @@ app.innerHTML = `<div class="splash">${OWL_SVG}<h1 class="splash-hi">${greeting(
 const minSplash = new Promise((r) => setTimeout(r, 1800));
 Promise.all([loadBank(), minSplash]).then(() => {
   booted = true;
+  loadNotices(() => { if (view === 'home' || view === 'exams') render(); });
   byId = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
   poolCache.clear();
   go(store.get().exam ? 'home' : 'pick');

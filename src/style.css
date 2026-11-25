@@ -464,3 +464,22 @@ html.native body.has-banner::after { display: none; }
 .btn.go { background: var(--green); color: #fff; box-shadow: 0 4px 0 #156B39; }
 #app[data-view='path'] { padding-bottom: calc(var(--tab-h) + var(--ad-h) + var(--safe-b) + 16px); }
 @media (prefers-reduced-motion: reduce) { .node.current, .bubble { animation: none; } }
+
+/* परीक्षा व सूचना */
+.exam-strip { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--card); border: 1.5px solid var(--line); border-radius: 18px; padding: 14px 16px; margin-top: 14px; }
+.exam-strip .ex-ico { font-size: 26px; }
+.exam-strip .grow { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.exam-strip small { color: var(--muted); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex-left { flex: none; background: #EEF1FB; color: var(--navy); font-weight: 800; font-size: 13px; padding: 6px 10px; border-radius: 999px; }
+.ex-left.soon { background: var(--red-bg); color: var(--red); }
+.notice { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; }
+.notice.urgent { border-color: #F3B3AE; box-shadow: 0 0 0 3px #FCEAE8; }
+.notice h3 { margin: 6px 0 4px; font-size: 17px; line-height: 1.35; }
+.notice p { margin: 6px 0 0; color: var(--muted); font-size: 14.5px; line-height: 1.5; }
+.n-date { font-size: 15px; color: var(--ink); }
+.n-link { display: inline-block; margin-top: 8px; font-weight: 700; color: var(--navy-2); font-size: 14.5px; }
+.nb { display: inline-block; font-size: 12.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #EEEBE3; color: var(--muted); }
+.nb.ok { background: var(--green-bg); color: var(--green); }
+.nb.warn { background: #FFF1DC; color: #B25E00; }
+.nb.hot { background: var(--red-bg); color: var(--red); }
+.n-disc { margin-top: 18px; line-height: 1.55; padding-bottom: 100px; }
