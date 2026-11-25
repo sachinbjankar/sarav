@@ -7,6 +7,7 @@ import './style.css';
 import { Capacitor } from '@capacitor/core';
 import { SUBJECTS, EXAMS, QUESTIONS, loadBank, full } from './questions.js';
 import { store, today } from './store.js';
+import { OWL_SVG, greeting, motto } from './mascot.js';
 import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded, adStatus } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
 import { backend } from './backend.js';
@@ -971,7 +972,9 @@ function pathView() {
   ${tabbar()}`;
 }
 
+let booted = false;
 function render(keepAnim = false) {
+  if (!booted) return;
   if (!store.get().exam && view !== 'pick') view = 'pick';
   const views = {
     pick: pickView, home: homeView, path: pathView, quiz: () => quizView(!keepAnim), result: resultView, review: reviewView,
@@ -1067,8 +1070,10 @@ if (Capacitor.isNativePlatform()) {
   import('@capacitor/app').then(({ App }) => App.addListener('backButton', back));
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') back(); });
-app.innerHTML = '<div class="splash"><div class="logo">स</div><p>प्रश्नसंच लोड होत आहे…</p></div>';
-loadBank().then(() => {
+app.innerHTML = `<div class="splash">${OWL_SVG}<h1 class="splash-hi">${greeting()}</h1><p class="splash-motto">${motto()}</p><div class="splash-dots"><i></i><i></i><i></i></div></div>`;
+const minSplash = new Promise((r) => setTimeout(r, 1800));
+Promise.all([loadBank(), minSplash]).then(() => {
+  booted = true;
   byId = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
   poolCache.clear();
   go(store.get().exam ? 'home' : 'pick');
