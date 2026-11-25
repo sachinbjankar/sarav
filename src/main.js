@@ -360,12 +360,18 @@ function prev() { if (quiz && quiz.i > 0) { quiz.i--; go('quiz'); } }
 async function finish() {
   stopTimer();
   if (quiz.mock) {
-    quiz.items.forEach((it, k) => { const a = quiz.answers[k]; if (a) store.record(it.q.id, a.ok); });
+    if (!quiz.pyq) quiz.items.forEach((it, k) => { const a = quiz.answers[k]; if (a) store.record(it.q.id, a.ok); });
     const wrongN = quiz.answers.filter((a) => a && !a.ok).length;
     quiz.net = Math.round((quiz.answers.filter((a) => a && a.ok).length - wrongN * quiz.mock.neg) * 100) / 100;
   }
   const score = quiz.answers.filter((a) => a && a.ok).length;
   quiz.score = score;
+  if (quiz.pyq) {
+    const st = pyqStats();
+    const cur = st[quiz.pyq] || { best: 0, n: 0 };
+    st[quiz.pyq] = { best: Math.max(cur.best, score), n: cur.n + 1, last: score, at: Date.now() };
+    try { localStorage.setItem(PYQ_KEY, JSON.stringify(st)); } catch (_) { /* ignore */ }
+  }
   quiz.secs = Math.round((Date.now() - quiz.started) / 1000);
   quiz.pts = quiz.ranked ? score * POINTS_PER_CORRECT : 0;
   let xp = score * POINTS_PER_CORRECT;
@@ -602,8 +608,8 @@ function homeView() {
       </button>
     </div>
 
-    <button class="mock-strip" data-act="mock-info">
-      <span class="ex-ico">📝</span><span class="grow"><b>पूर्ण सराव पेपर</b><small>१०० प्रश्न • ${mr(MOCK[e.id].mins)} मिनिटे • खऱ्या परीक्षेसारखा</small></span><span class="arrow">›</span>
+    <button class="mock-strip" data-act="tab" data-v="pyq">
+      <span class="ex-ico">📜</span><span class="grow"><b>मागील प्रश्नपत्रिका</b><small>${pyqFor(e.id).length ? `${mr(pyqFor(e.id).length)} पेपर • खऱ्या परीक्षेसारखी वेळ व गुणपद्धती` : 'MPSC चे खरे पेपर • परीक्षा मोडमध्ये सोडवा'}</small></span><span class="arrow">›</span>
     </button>
 
     <h3 class="sec">${e.name} • विषयानुसार सराव</h3>
@@ -643,13 +649,14 @@ function mockView(animate) {
       <span>प्रश्न ${mr(quiz.i + 1)}/${mr(quiz.items.length)} • सोडवले ${mr(done)}</span>
     </div>
     <h2 class="qtext">${esc(it.q.q)}</h2>
+    ${it.q.img ? `<img class="qimg" src="${esc(it.q.img)}" alt="आकृती">` : ''}
     <div class="opts">
       ${it.opts.map((o, k) => `<button class="opt ${a && a.choice === k ? 'picked' : ''}" data-act="ans" data-k="${k}">
           <span class="l">${LETTERS[k]}</span><span class="t">${esc(o)}</span></button>`).join('')}
     </div>
     <div class="qactions three">
       <button class="btn ghost" data-act="prev" ${quiz.i ? '' : 'disabled'}>← मागील</button>
-      <button class="btn ghost" data-act="save" aria-label="जतन करा">${store.isSaved(it.q.id) ? '⭐' : '☆'}</button>
+      ${quiz.pyq ? '<span></span>' : `<button class="btn ghost" data-act="save" aria-label="जतन करा">${store.isSaved(it.q.id) ? '⭐' : '☆'}</button>`}
       <button class="btn primary" data-act="next">${last ? 'पेपर जमा करा' : a ? 'पुढील →' : 'सोडा →'}</button>
     </div>
     ${quiz.mock.neg ? `<p class="muted small center">चुकीच्या उत्तराला ${mr(quiz.mock.neg)} गुण वजा • उत्तर बदलता येते</p>` : '<p class="muted small center">उत्तर बदलता येते • निकाल शेवटी</p>'}
@@ -767,6 +774,7 @@ function reviewCard(q, opts, correct, choice, idx) {
       <button class="star" data-act="save-id" data-id="${q.id}" aria-label="जतन">${saved ? '⭐' : '☆'}</button>
     </div>
     <h4>${esc(q.q)}</h4>
+    ${q.img ? `<img class="qimg" src="${esc(q.img)}" alt="आकृती">` : ''}
     <ul>
       ${opts.map((o, k) => `<li class="${k === correct ? 'right' : k === choice ? 'wrong' : ''}"><span>${LETTERS[k]}</span>${esc(o)}</li>`).join('')}
     </ul>
@@ -1111,6 +1119,66 @@ function pathView() {
 }
 
 
+
+// ---------- मागील प्रश्नपत्रिका ----------
+let pyqIndex = [];
+const pyqCache = new Map();
+let pyqAll = false;
+const PYQ_KEY = 'sarav.pyq';
+const pyqStats = () => { try { return JSON.parse(localStorage.getItem(PYQ_KEY) || '{}'); } catch (_) { return {}; } };
+function loadPyqIndex() {
+  return fetch('pyq/index.json').then((r) => (r.ok ? r.json() : [])).then((x) => { pyqIndex = x; }).catch(() => {});
+}
+const pyqFor = (eid) => pyqIndex.filter((p) => !eid || p.exams.includes(eid));
+const yearOf = (iso) => mr(iso.slice(0, 4));
+function pyqView() {
+  const e = exam();
+  const mine = pyqFor(e.id);
+  const list = pyqAll || !mine.length ? pyqIndex : mine;
+  const st = pyqStats();
+  return `
+  <header class="top slim"><h1>📜 मागील प्रश्नपत्रिका</h1></header>
+  <main class="wrap">
+    <div class="seg">
+      <button class="${pyqAll ? '' : 'on'}" data-act="pyq-scope" data-all="0">${esc(e.name)}</button>
+      <button class="${pyqAll ? 'on' : ''}" data-act="pyq-scope" data-all="1">सर्व परीक्षा</button>
+    </div>
+    ${!pyqAll && !mine.length ? `<p class="muted">${esc(e.name)} च्या प्रश्नपत्रिका लवकरच जोडल्या जातील. तोपर्यंत इतर परीक्षांचे पेपर सोडवू शकता:</p>` : ''}
+    ${list.map((p) => {
+      const s2 = st[p.id];
+      return `<button class="pyq-card" data-act="pyq-start" data-id="${p.id}">
+        <span class="pyq-yr">${yearOf(p.date)}</span>
+        <span class="grow"><b>${esc(p.title)}</b>
+          <small>${mr(p.count)} प्रश्न • ${mr(p.mins)} मिनिटे${p.neg ? ` • चुकीला ${mr(p.neg)} वजा` : ''}</small>
+          ${s2 ? `<small class="pyq-best">सर्वोत्तम: ${mr(s2.best)}/${mr(p.count)} • ${mr(s2.n)} वेळा सोडवला</small>` : ''}
+        </span><span class="arrow">›</span>
+      </button>`;
+    }).join('')}
+    <p class="muted small n-disc">प्रश्न MPSC च्या प्रश्नपत्रिकांवरून टाइप केले असून उत्तरे आयोगाच्या अंतिम उत्तरतालिकेनुसार आहेत. रद्द केलेले व उताऱ्यावर आधारित प्रश्न वगळले आहेत. नवीन पेपर नियमितपणे जोडले जातील.</p>
+  </main>
+  ${tabbar()}`;
+}
+async function startPyq(id) {
+  const meta = pyqIndex.find((p) => p.id === id);
+  if (!meta) return;
+  let paper = pyqCache.get(id);
+  if (!paper) {
+    try { paper = await (await fetch(meta.file)).json(); pyqCache.set(id, paper); } catch (_) { toast('पेपर उघडता आला नाही'); return; }
+  }
+  const L = ['१', '२', '३', '४'];
+  const items = paper.q.map((x) => ({
+    q: { id: `pyq:${id}:${x.n}`, s: x.s, q: `प्र. ${mr(x.n)}. ${x.q}`, o: x.o, img: x.img, e: `योग्य उत्तर: (${L[x.a]}) ${x.o[x.a]}\n(आयोगाची अंतिम उत्तरतालिका)` },
+    opts: x.o, correct: x.a,
+  }));
+  quiz = {
+    mode: 'pyq', pyq: id, title: paper.short || paper.title, items, retry: false, ranked: false, exam: exam().id, lvl: 0,
+    mock: { mins: paper.mins, neg: paper.neg, note: paper.note },
+    deadline: Date.now() + paper.mins * 60000,
+    i: 0, answers: items.map(() => null), removed: items.map(() => []), fifty: 0, left: 0, started: Date.now(),
+  };
+  go('quiz');
+}
+
 // ---------- परीक्षा व सूचना ----------
 const isoMr = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${mr(d)} ${MONTHS[m - 1]} ${mr(y)}`; };
 const leftMr = (n) => (n === 0 ? 'आज!' : n === 1 ? 'उद्या' : `${mr(n)} दिवस बाकी`);
@@ -1161,7 +1229,7 @@ function render(keepAnim = false) {
   if (!store.get().exam && view !== 'pick') view = 'pick';
   const views = {
     pick: pickView, home: homeView, path: pathView, quiz: () => quizView(!keepAnim), result: resultView, review: reviewView,
-    saved: savedView, rank: rankView, me: meView, auth: authView, exams: examsView,
+    saved: savedView, rank: rankView, me: meView, auth: authView, exams: examsView, pyq: pyqView,
   };
   app.innerHTML = (views[view] || homeView)();
   app.dataset.view = view;
@@ -1199,6 +1267,17 @@ document.addEventListener('click', async (e) => {
     case 'fifty': return useFifty();
     case 'exit':
     case 'back': return back();
+    case 'pyq-scope':
+      pyqAll = el.dataset.all === '1';
+      render();
+      break;
+    case 'pyq-start': {
+      const p = pyqIndex.find((x) => x.id === el.dataset.id);
+      if (!p) return;
+      const ok = await confirmBox(`${p.title}\n\n• ${mr(p.count)} प्रश्न, ${mr(p.mins)} मिनिटे\n${p.neg ? `• चुकीच्या उत्तराला ${mr(p.neg)} गुण वजा\n` : ''}• उत्तर बदलता येते; निकाल व योग्य उत्तरे शेवटी`, 'पेपर सुरू करा', 'नंतर');
+      if (ok) startPyq(p.id);
+      return;
+    }
     case 'exams-scope':
       examsAll = el.dataset.all === '1';
       render();
@@ -1214,7 +1293,7 @@ document.addEventListener('click', async (e) => {
       return go('home');
     case 'review': reviewOnlyWrong = false; return go('review');
     case 'filter': reviewOnlyWrong = el.dataset.v === 'wrong'; return render();
-    case 'again': return startQuiz(quiz.mode === 'daily' ? 'mixed' : quiz.mode, quiz.sid, quiz.lvl);
+    case 'again': if (quiz.mode === 'pyq') return startPyq(quiz.pyq); return startQuiz(quiz.mode === 'daily' ? 'mixed' : quiz.mode, quiz.sid, quiz.lvl);
     case 'save': {
       const on = store.toggleSave(quiz.items[quiz.i].q.id);
       toast(on ? 'प्रश्न जतन केला' : 'जतन यादीतून काढला');
@@ -1269,6 +1348,7 @@ const minSplash = new Promise((r) => setTimeout(r, 1800));
 Promise.all([loadBank(), minSplash]).then(() => {
   booted = true;
   loadNotices(() => { if (view === 'home' || view === 'exams') render(); });
+  loadPyqIndex().then(() => { if (view === 'home' || view === 'pyq') render(); });
   byId = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
   poolCache.clear();
   go(store.get().exam ? 'home' : 'pick');

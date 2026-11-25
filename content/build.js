@@ -22,6 +22,8 @@ import { genParyavaran } from './tables/paryavaran.js';
 import { genSamanya } from './tables/samanya.js';
 import { genHand2 } from './tables/hand2.js';
 import { genDeep } from './tables/deep.js';
+import { genMarathi2 } from './tables/marathi2.js';
+import { genEnglish2 } from './tables/english2.js';
 import { examAt, SPECS } from './gen-exam.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -31,7 +33,7 @@ fs.mkdirSync(out, { recursive: true });
 const parts = [
   ...genItihas(), ...genBhugol(), ...genRajya(), ...genArtha(), ...genVidnyan(),
   ...genMarathi(), ...genEnglish(), ...genPanchayat(), ...genMahsul(), ...genGkExtra(), ...genItihas2(), ...genBhugol2(), ...genPairs(),
-  ...genParyavaran(), ...genSamanya(), ...genHand2(), ...genDeep(),
+  ...genParyavaran(), ...genSamanya(), ...genHand2(), ...genDeep(), ...genMarathi2(), ...genEnglish2(),
 ];
 
 // अवैध प्रश्न (एकसारखे पर्याय इ.) वगळा

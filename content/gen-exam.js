@@ -15,6 +15,8 @@ import { ALL as PV } from './tables/paryavaran.js';
 import { ALL as SM } from './tables/samanya.js';
 import { PANCH as PN, MAHSUL as MH } from './tables/hand2.js';
 import { DEEP as DP } from './tables/deep.js';
+import { ALL as M2 } from './tables/marathi2.js';
+import { ALL as E2 } from './tables/english2.js';
 
 const Y = (v) => mr(v);
 const sp = (t, a, b, label, o = {}) => ({ t, a, b, label, ...o });
@@ -162,6 +164,17 @@ export const SPECS = {
     sp(MA.LIT, 'book', 'who', 'साहित्यकृती — लेखक'),
     sp(MA.PEN, 'pen', 'real', 'टोपणनाव — खरे नाव'),
     sp(MA.KAL, 's', 'k', 'वाक्य — काळ'),
+    sp(M2.ALANKAR, 's', 'a', 'वाक्य — अलंकार'),
+    sp(M2.ALDEF, 'a', 'def', 'अलंकार — लक्षण'),
+    sp(M2.AVYAY, 'w', 't', 'शब्द — अव्ययाचा प्रकार'),
+    sp(M2.UBHAY, 'w', 't', 'उभयान्वयी अव्यये — प्रकार'),
+    sp(M2.KEVAL, 'w', 't', 'केवलप्रयोगी अव्यये — प्रकार'),
+    sp(M2.VIBH, 'v', 'k', 'विभक्ती — कारकार्थ'),
+    sp(M2.PRATYAY, 'p', 'v', 'प्रत्यय — विभक्ती'),
+    sp(M2.VAKYA, 's', 't', 'वाक्य — प्रकार'),
+    sp(M2.SAMAS2, 'w', 't', 'सामासिक शब्द — समास'),
+    sp(M2.MHAN2, 'p', 'mean', 'म्हण — अर्थ'),
+    sp(M2.VAK2, 'ph', 'mean', 'वाक्प्रचार — अर्थ'),
   ],
   english: [
     sp(EN.VERB, 'base', 'past', 'Verb — Past tense'),
@@ -170,6 +183,10 @@ export const SPECS = {
     sp(EN.ONEW, 'def', 'w', 'Description — One word'),
     sp(EN.IDIOMS, 'id', 'mean', 'Idiom — Meaning'),
     sp(EN.GENDER, 'm', 'f', 'Masculine — Feminine'),
+    sp(E2.PHRASAL, 'pv', 'mean', 'Phrasal verb — Meaning'),
+    sp(E2.IDIOM2, 'id', 'mean', 'Idiom — Meaning'),
+    sp(E2.ONEW2, 'def', 'w', 'Description — One word'),
+    sp(E2.TAG, 's', 't', 'Sentence — Question tag'),
   ],
   panchayat: [
     sp(PN.PCOMM, 'c', 'work', 'समिती — शिफारस/कार्य'),
