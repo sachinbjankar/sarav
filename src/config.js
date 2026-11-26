@@ -8,9 +8,9 @@ export const ADS = {
   INTERSTITIAL: 'ca-app-pub-4684655036811137/7631795507',
   REWARDED: 'ca-app-pub-4684655036811137/1066387158',
   // पूर्ण झालेल्या किती चाचण्यांनंतर एक पूर्ण-स्क्रीन जाहिरात दाखवायची
-  INTERSTITIAL_EVERY: 2,
+  INTERSTITIAL_EVERY: 1,
   // दोन पूर्ण-स्क्रीन जाहिरातींमध्ये किमान अंतर (सेकंद)
-  INTERSTITIAL_GAP_SEC: 120,
+  INTERSTITIAL_GAP_SEC: 90,
 };
 
 export const QUIZ = {
