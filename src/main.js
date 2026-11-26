@@ -7,7 +7,7 @@ import './style.css';
 import { Capacitor } from '@capacitor/core';
 import { SUBJECTS, EXAMS, QUESTIONS, loadBank, full } from './questions.js';
 import { store, today } from './store.js';
-import { OWL_SVG, greeting, motto } from './mascot.js';
+import { OWL_SVG, greeting, motto, owl, owlLine } from './mascot.js';
 import { loadNotices, noticesFor, nextFor, noticesUpdated } from './notices.js';
 import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
@@ -695,7 +695,7 @@ function quizView(animate = true) {
     </div>
     ${a ? `
       <div class="explain ${a.ok ? 'ok' : 'no'}">
-        <b>${a.ok ? '✅ बरोबर!' : a.choice === -1 ? '⏰ वेळ संपली' : '❌ चूक'}</b>
+        <div class="ex-head">${owl(a.ok ? 'correct' : 'wrong')}<b>${a.ok ? '✅ बरोबर!' : a.choice === -1 ? '⏰ वेळ संपली' : '❌ चूक'}</b></div>
         <p>${esc(it.q.e)}</p>
       </div>
       <div class="qactions">
@@ -733,11 +733,14 @@ function resultView() {
   const lvlBox = isLvl ? `
       <div class="lvl-stars">${[1, 2, 3].map((k) => `<span class="${k <= quiz.stars ? 'on' : ''}">★</span>`).join('')}</div>
       <p class="lvl-msg">${quiz.stars ? `स्तर ${mr(quiz.lvl + 1)} पूर्ण!${quiz.chest ? ' 🎁 खजिना उघडला: +३० XP' : ''}` : 'स्तर पार करण्यासाठी किमान ६ प्रश्न बरोबर हवेत. पुन्हा प्रयत्न करा!'}</p>` : '';
+  const say = owlLine(pct, isLvl ? quiz.stars > 0 : undefined);
+  const owlBox = `<div class="owl-say">${owl(say.mood)}<div class="bubble">${say.line}</div></div>`;
   const xpLine = `<div class="xp-note">⚡ +${mr(quiz.xp)} XP${quiz.levelUp ? ` • 🎉 तुम्ही स्तर ${mr(quiz.levelUp)} गाठला!` : ''}</div>`;
   return `
   <header class="top slim"><h1>${isLvl ? 'स्तर निकाल' : 'निकाल'}</h1></header>
   <main class="wrap">
     <section class="result">
+      ${owlBox}
       ${lvlBox}
       <div class="score-ring" style="--p:${quiz.score / total}">
         <div><b>${mr(quiz.score)}</b><span>/${mr(total)}</span></div>

@@ -23,6 +23,16 @@ export const OWL_SVG = `
       <circle cx="79" cy="75" r="4.5" fill="#FFFFFF"/>
       <circle cx="129" cy="75" r="4.5" fill="#FFFFFF"/>
     </g>
+    <!-- आनंदी डोळे (मिटलेले, हसरे) -->
+    <g class="owl-happy" fill="none" stroke="#1B2140" stroke-width="6" stroke-linecap="round">
+      <path d="M60 84 Q75 66 90 84"/>
+      <path d="M110 84 Q125 66 140 84"/>
+    </g>
+    <!-- काळजीच्या भुवया -->
+    <g class="owl-brows" stroke="#1E2A5A" stroke-width="5" stroke-linecap="round" fill="none">
+      <path d="M58 56 Q72 50 86 44"/>
+      <path d="M142 56 Q128 50 114 44"/>
+    </g>
     <g class="owl-lids">
       <rect x="40" y="46" width="64" height="64" rx="32" fill="#2E3F80"/>
       <rect x="96" y="46" width="64" height="64" rx="32" fill="#2E3F80"/>
@@ -33,7 +43,7 @@ export const OWL_SVG = `
     <ellipse cx="50" cy="110" rx="8" ry="5" fill="#F28C28" opacity=".35"/>
     <ellipse cx="150" cy="110" rx="8" ry="5" fill="#F28C28" opacity=".35"/>
     <!-- डावा पंख -->
-    <path d="M34 112 C14 128 16 160 36 172 C44 150 46 132 40 112 Z" fill="#1E2A5A"/>
+    <path class="owl-wing-l" d="M34 112 C14 128 16 160 36 172 C44 150 46 132 40 112 Z" fill="#1E2A5A"/>
     <!-- पाय -->
     <path d="M80 198 l-6 10 M86 198 l0 11 M92 198 l6 10" stroke="#F28C28" stroke-width="5" stroke-linecap="round"/>
     <path d="M108 198 l-6 10 M114 198 l0 11 M120 198 l6 10" stroke="#F28C28" stroke-width="5" stroke-linecap="round"/>
@@ -71,3 +81,27 @@ const LINES = [
   'एक प्रश्न, एक पाऊल पुढे.',
 ];
 export const motto = () => LINES[Math.floor(Date.now() / 86400000) % LINES.length];
+
+// भावनांसह घुबड: mood = cheer | happy | excited | correct | wrong
+export function owl(mood = 'happy', extra = '') {
+  return `<div class="mascot m-${mood} ${extra}">${OWL_SVG}${mood === 'excited' ? confetti() : ''}</div>`;
+}
+
+const CONF_COLORS = ['#F28C28', '#2E3F80', '#3BA55C', '#F2C94C', '#E5533D'];
+function confetti() {
+  let h = '<div class="confetti" aria-hidden="true">';
+  for (let i = 0; i < 18; i++) {
+    const x = Math.round(Math.cos((i / 18) * Math.PI * 2) * (70 + (i % 3) * 25));
+    const y = Math.round(Math.sin((i / 18) * Math.PI * 2) * (55 + (i % 4) * 18)) - 40;
+    h += `<i style="--x:${x}px;--y:${y}px;--r:${(i * 47) % 360}deg;--d:${(i % 5) * 40}ms;background:${CONF_COLORS[i % 5]}"></i>`;
+  }
+  return h + '</div>';
+}
+
+// निकालासाठी घुबडाचे बोल
+export function owlLine(pct, passed, lvl = passed !== undefined) {
+  if (passed === false) return { mood: 'cheer', line: 'हरकत नाही! थोडा अजून सराव, पुढच्या वेळी नक्की जमेल 💪' };
+  if (pct >= 80) return { mood: 'excited', line: lvl ? 'शाब्बास! जबरदस्त कामगिरी! चला, पुढचा टप्पा! 🚀' : 'शाब्बास! जबरदस्त कामगिरी! असेच पुढे चला 🚀' };
+  if (pct >= 50) return { mood: 'happy', line: lvl ? 'छान! तुम्ही प्रगती करताय. पुढचा टप्पा वाट पाहतोय!' : 'छान! तुम्ही प्रगती करताय. रोज असाच सराव करा!' };
+  return { mood: 'cheer', line: 'हरकत नाही! चुकांमधूनच शिकतो. पुन्हा प्रयत्न करू 💪' };
+}

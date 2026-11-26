@@ -505,3 +505,56 @@ html.native body.has-banner::after { display: none; }
 .pyq-card .pyq-best { color: var(--green); font-weight: 700; }
 .pyq-yr { flex: none; width: 58px; height: 58px; border-radius: 14px; background: #EEF1FB; color: var(--navy); font-weight: 800; font-size: 17px; display: grid; place-items: center; }
 .qimg { display: block; max-width: 100%; margin: -6px auto 16px; border-radius: 10px; background: #fff; }
+
+/* ---------- घुबडाच्या भावना (Duolingo-सारखे) ---------- */
+.owl .owl-happy, .owl .owl-brows { opacity: 0; }
+.mascot { position: relative; display: inline-block; line-height: 0; }
+.mascot .owl { width: 100%; height: auto; overflow: visible; }
+.mascot .owl-wing-l { transform-origin: 38px 112px; }
+.mascot.m-excited .owl-eyes, .mascot.m-happy .owl-eyes, .mascot.m-correct .owl-eyes { opacity: 0; }
+.mascot.m-excited .owl-happy, .mascot.m-happy .owl-happy, .mascot.m-correct .owl-happy { opacity: 1; }
+.mascot.m-excited .owl-lids, .mascot.m-happy .owl-lids, .mascot.m-correct .owl-lids { display: none; }
+.mascot.m-cheer .owl-brows, .mascot.m-wrong .owl-brows { opacity: 1; }
+
+.mascot.m-excited .owl { animation: owl-jump .55s cubic-bezier(.3,.6,.4,1) .1s 4; transform-origin: 100px 210px; }
+.mascot.m-excited .owl-wing { animation: owl-flap .28s ease-in-out .1s 8; }
+.mascot.m-excited .owl-wing-l { animation: owl-flap-l .28s ease-in-out .1s 8; }
+.mascot.m-excited .owl-spark { animation: owl-spark .5s ease-in-out infinite; }
+
+.mascot.m-happy .owl { animation: owl-hop .6s cubic-bezier(.3,.6,.4,1) .15s 2; transform-origin: 100px 210px; }
+.mascot.m-happy .owl-wing { animation: owl-wave .9s ease-in-out .2s 3; }
+
+.mascot.m-cheer .owl { animation: owl-tilt 2.4s ease-in-out .2s infinite; transform-origin: 100px 200px; }
+.mascot.m-cheer .owl-wing { animation: owl-wave 1s ease-in-out 1.2s 2; }
+
+.mascot.m-correct .owl { animation: owl-hop .5s cubic-bezier(.3,.6,.4,1) 1; transform-origin: 100px 210px; }
+.mascot.m-wrong .owl { animation: owl-shake .5s ease-in-out 1; transform-origin: 100px 120px; }
+.mascot.m-correct .owl-wing, .mascot.m-wrong .owl-wing { animation: none; }
+
+@keyframes owl-jump { 0%,100% { transform: translateY(0) scale(1,1); } 15% { transform: translateY(0) scale(1.08,.9); } 50% { transform: translateY(-26px) scale(.95,1.06); } 85% { transform: translateY(0) scale(1.06,.94); } }
+@keyframes owl-hop { 0%,100% { transform: translateY(0); } 45% { transform: translateY(-12px); } }
+@keyframes owl-flap { 0%,100% { transform: rotate(0); } 50% { transform: rotate(-40deg); } }
+@keyframes owl-flap-l { 0%,100% { transform: rotate(0); } 50% { transform: rotate(40deg); } }
+@keyframes owl-tilt { 0%,100% { transform: rotate(0); } 30% { transform: rotate(-7deg); } 70% { transform: rotate(5deg); } }
+@keyframes owl-shake { 0%,100% { transform: translateX(0) rotate(0); } 20% { transform: translateX(-5px) rotate(-5deg); } 40% { transform: translateX(5px) rotate(5deg); } 60% { transform: translateX(-4px) rotate(-3deg); } 80% { transform: translateX(3px) rotate(2deg); } }
+
+.confetti { position: absolute; left: 50%; top: 45%; width: 0; height: 0; pointer-events: none; }
+.confetti i { position: absolute; width: 8px; height: 12px; border-radius: 2px; opacity: 0;
+  animation: conf 1.4s cubic-bezier(.2,.7,.4,1) calc(.15s + var(--d)) forwards; }
+@keyframes conf { 0% { opacity: 1; transform: translate(0,0) rotate(0); }
+  70% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--x), calc(var(--y) + 70px)) rotate(var(--r)); } }
+
+/* निकाल पानावरील घुबड व बोल */
+.owl-say { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; text-align: left; }
+.owl-say .mascot { width: 92px; flex: none; }
+.owl-say .bubble { animation: rise .4s .25s both; top: auto; left: auto; transform: none; flex: 1; min-width: 0; white-space: normal; overflow-wrap: anywhere; font-size: 15px; position: relative; background: #fff; border: 2px solid var(--line, #E6E2D8); border-radius: 16px; padding: 10px 14px;
+  font-weight: 700; color: var(--navy, #1E2A5A); line-height: 1.4; animation: rise .4s .25s both; }
+.owl-say .bubble::after { display: none; }
+.owl-say .bubble::before { content: ''; position: absolute; left: -8px; top: 50%; width: 12px; height: 12px; margin-top: -6px; background: #fff; border-left: 2px solid var(--line, #E6E2D8); border-bottom: 2px solid var(--line, #E6E2D8); transform: rotate(45deg); }
+/* प्रश्नानंतर लहान घुबड */
+.explain .ex-head { display: flex; align-items: center; gap: 8px; }
+.explain .ex-head .mascot { width: 42px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot .owl, .mascot .owl * , .confetti i { animation: none !important; }
+}
