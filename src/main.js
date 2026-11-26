@@ -1165,8 +1165,6 @@ async function startPyq(id) {
   if (!paper) {
     try { paper = await (await fetch(meta.file)).json(); pyqCache.set(id, paper); } catch (_) { toast('पेपर उघडता आला नाही'); return; }
   }
-  // पेपर सुरू होण्यापूर्वी एक पूर्ण-स्क्रीन जाहिरात (मागील जाहिरात ४५ सेकंदांपूर्वीची असल्यास); टायमर जाहिरातीनंतरच सुरू होतो
-  await maybeInterstitial(1, 45);
   const L = ['१', '२', '३', '४'];
   const items = paper.q.map((x) => ({
     q: { id: `pyq:${id}:${x.n}`, s: x.s, q: `प्र. ${mr(x.n)}. ${x.q}`, o: x.o, img: x.img, e: `योग्य उत्तर: (${L[x.a]}) ${x.o[x.a]}\n(आयोगाची अंतिम उत्तरतालिका)` },

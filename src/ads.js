@@ -92,9 +92,9 @@ export async function hideBanner() {
 }
 
 // चाचणी पूर्ण झाल्यावर: ठराविक अंतराने पूर्ण-स्क्रीन जाहिरात
-export async function maybeInterstitial(testsDone, minGapSec = ADS.INTERSTITIAL_GAP_SEC) {
+export async function maybeInterstitial(testsDone) {
   if (testsDone % ADS.INTERSTITIAL_EVERY !== 0) return;
-  if (Date.now() - lastInterstitial < minGapSec * 1000) return;
+  if (Date.now() - lastInterstitial < ADS.INTERSTITIAL_GAP_SEC * 1000) return;
   lastInterstitial = Date.now();
   if (!native) return fakeAd('पूर्ण-स्क्रीन जाहिरात (नमुना)', 1500);
   if (!ready) return;
