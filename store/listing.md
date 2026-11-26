@@ -3,10 +3,10 @@
 ## Main store listing
 
 **App name** (30 characters max):
-Sarav - स्पर्धा परीक्षा
+Sarav - MPSC, Talathi, Police
 
 **Short description** (80 characters max):
-MPSC, पोलीस भरती, तलाठी, ZP: १ लाख+ मराठी प्रश्न व मागील प्रश्नपत्रिका, मोफत
+MPSC, पोलीस भरती, तलाठी, ZP व सरळसेवा: १ लाख+ मराठी प्रश्न, मागील पेपर मोफत
 
 **Full description:**
 
@@ -14,6 +14,9 @@ MPSC, पोलीस भरती, तलाठी, ZP: १ लाख+ मर�
 
 📚 १ लाखाहून अधिक प्रश्न
 इतिहास, भूगोल, राज्यघटना, अर्थशास्त्र, विज्ञान, पर्यावरण, सामान्य ज्ञान, मराठी व इंग्रजी व्याकरण, अंकगणित, बुद्धिमत्ता चाचणी, पंचायत राज आणि महसूल. सर्व विभागांत समान प्रश्न.
+
+🎯 कोणत्या परीक्षांसाठी?
+MPSC Rajyaseva, Combine (PSI, STI, ASO), Group C, Police Bharti, Talathi Bharti, ZP Bharti आणि सर्व सरळसेवा भरती (Saralseva Bharti) साठी सराव.
 
 📝 खऱ्या परीक्षेसारखे प्रश्न
 जोड्या जुळवा, योग्य विधाने निवडा, कालक्रम लावा. आयोगाच्या प्रश्नपत्रिकेत येणारे सर्व प्रकार. प्रत्येक परीक्षेच्या पातळीनुसार सोपे, मध्यम व कठीण प्रश्नांचे प्रमाण.
@@ -39,7 +42,7 @@ MPSC, पोलीस भरती, तलाठी, ZP: १ लाख+ मर�
 ## Store settings
 
 - **App category:** Education
-- **Tags:** Education, Exam preparation, Quiz
+- **Tags** (Store settings → App tags, pick up to 5 from Google's list): Test preparation, Education, Quiz, Learning
 - **Contact email:** sachiv.app@gmail.com
 - **Privacy policy URL:** https://sachinbjankar.github.io/sarav/privacy.html (works after GitHub Pages is enabled)
 
