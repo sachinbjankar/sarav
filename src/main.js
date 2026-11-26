@@ -867,7 +867,7 @@ function rankView() {
       <button class="${rankPeriod === 'week' ? 'on' : ''}" data-act="rank-period" data-v="week">या आठवड्यात</button>
       <button class="${rankPeriod === 'all' ? 'on' : ''}" data-act="rank-period" data-v="all">सर्वकाळ</button>
     </div>
-    ${backend.kind === 'mock' ? '<p class="demo-note">डेमो: इतर नावे नमुना आहेत. Firebase जोडल्यावर खरे विद्यार्थी दिसतील.</p>' : ''}
+    ${backend.kind === 'mock' ? (globalThis.Capacitor?.isNativePlatform?.() ? '<p class="demo-note">सर्व विद्यार्थ्यांची एकत्र रँकिंग लवकरच सुरू होईल. सध्या तुमचे गुण या फोनवर जतन होतात.</p>' : '<p class="demo-note">डेमो: इतर नावे नमुना आहेत.</p>') : ''}
     ${mineCard}
     ${c.error ? `<p class="empty">${esc(c.error)}</p>` : c.loading && !list.length ? '<p class="empty">लोड होत आहे…</p>' : !list.length
       ? '<div class="empty"><span>🏁</span><p>अजून कोणीही गुण मिळवलेले नाहीत. पहिले तुम्ही व्हा!</p></div>'

@@ -78,7 +78,8 @@ export const backend = {
     await wait();
     const f = scoreField(exam, period);
     const real = Object.entries(db.players).filter(([, p]) => p[f]).map(([uid, p]) => ({ uid, name: p.name, dist: p.dist, pts: p[f] }));
-    return [...real, ...sample(exam, period)].sort((a, b) => b.pts - a.pts).slice(0, 50);
+    const native = !!globalThis.Capacitor?.isNativePlatform?.();
+    return [...real, ...(native ? [] : sample(exam, period))].sort((a, b) => b.pts - a.pts).slice(0, 50);
   },
   async rankOf(exam, period, pts) {
     if (!pts) return null;
