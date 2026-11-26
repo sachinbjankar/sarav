@@ -194,6 +194,7 @@ html.native body.has-banner::after { display: none; }
 .opt.gone { opacity: .25; text-decoration: line-through; }
 @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
+.explain p { white-space: pre-line; }
 .explain { margin-top: 16px; border-radius: 16px; padding: 14px; animation: pop .2s ease-out; }
 .explain.ok { background: var(--green-bg); }
 .explain.no { background: #FFF4E5; }

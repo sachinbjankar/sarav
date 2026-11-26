@@ -969,6 +969,7 @@ function meView() {
         <div class="grow"><b>${esc(h.title || '')}</b><small>${dateMr(h.at)}${h.pts ? ` • +${mr(h.pts)} गुण` : ''}</small></div>
       </div>`).join('')}</section>` : '<p class="muted small">अजून एकही चाचणी दिली नाही.</p>'}
 
+    <p class="muted small" style="margin:20px 4px 4px;line-height:1.5">‘सराव’ हे खाजगी शैक्षणिक अ‍ॅप आहे. हे MPSC, महाराष्ट्र शासन किंवा कोणत्याही सरकारी संस्थेशी संलग्न नाही. मागील प्रश्नपत्रिका व परीक्षांच्या तारखा अधिकृत संकेतस्थळ mpsc.gov.in वरून घेतल्या आहेत; अधिकृत माहितीसाठी ते संकेतस्थळ पाहा.</p>
     <div class="stack" style="padding-bottom:120px">
       <a class="btn link" href="${APP.privacyUrl}" target="_blank" rel="noopener">गोपनीयता धोरण</a>
       ${user ? '<button class="btn link" data-act="logout">लॉगआउट</button><button class="btn link danger" data-act="delete-account">खाते कायमचे हटवा</button>'
