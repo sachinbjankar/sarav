@@ -9,7 +9,7 @@ import { SUBJECTS, EXAMS, QUESTIONS, loadBank, full } from './questions.js';
 import { store, today } from './store.js';
 import { OWL_SVG, greeting, motto } from './mascot.js';
 import { loadNotices, noticesFor, nextFor, noticesUpdated } from './notices.js';
-import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded, adStatus } from './ads.js';
+import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
 import { backend } from './backend.js';
 import { DISTRICTS, errText, scoreField } from './backend-common.js';
@@ -969,7 +969,6 @@ function meView() {
         <div class="grow"><b>${esc(h.title || '')}</b><small>${dateMr(h.at)}${h.pts ? ` • +${mr(h.pts)} गुण` : ''}</small></div>
       </div>`).join('')}</section>` : '<p class="muted small">अजून एकही चाचणी दिली नाही.</p>'}
 
-    <p class="muted small" style="text-align:center;word-break:break-word;margin:18px 0 6px">जाहिरात स्थिती — ${esc(adStatus())}</p>
     <div class="stack" style="padding-bottom:120px">
       <a class="btn link" href="${APP.privacyUrl}" target="_blank" rel="noopener">गोपनीयता धोरण</a>
       ${user ? '<button class="btn link" data-act="logout">लॉगआउट</button><button class="btn link danger" data-act="delete-account">खाते कायमचे हटवा</button>'
