@@ -3,7 +3,7 @@
 ## Main store listing
 
 **App name** (30 characters max):
-सराव Sarav – MPSC पोलीस भरती
+Sarav - Spardha Pariksha
 
 **Short description** (80 characters max):
 MPSC, पोलीस भरती, तलाठी, ZP: १ लाख+ मराठी प्रश्न व मागील प्रश्नपत्रिका, मोफत
