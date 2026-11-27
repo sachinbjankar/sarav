@@ -144,7 +144,7 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
     let data;
     try { data = await (await fetch(fileUrl(meta))).json(); } catch (_) { return toast('माहिती उघडता आली नाही'); }
     const d = loadDraft(id);
-    cur = { meta, data, series: d?.series || meta.series[0], ans: d?.ans || Array(data.count).fill(null), showQ: false, qs: null, submitted: d?.submitted };
+    cur = { meta, data, series: (d?.series && data.series[d.series]) ? d.series : Object.keys(data.series)[0], ans: d?.ans || Array(data.count).fill(null), showQ: false, qs: null, submitted: d?.submitted };
     if (cur.submitted) return showResult();
     go('nikal-entry');
   }
