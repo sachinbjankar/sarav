@@ -21,6 +21,6 @@ exams = [
 ]
 for e in exams:
     json.dump(e, open(f"{ROOT}/nikal/{e['id']}.json", 'w'), ensure_ascii=False)
-idx = [{k: e[k] for k in ('id', 'title', 'short', 'exams', 'date', 'count', 'status', 'demo')} | {'file': f"nikal/{e['id']}.json", 'series': list(e['series'])} for e in exams]
-json.dump(idx, open(f'{ROOT}/nikal/index.json', 'w'), ensure_ascii=False, indent=1)
+# index.json (परीक्षांचे वेळापत्रक) हाताने सांभाळले जाते — येथे फक्त पेपर फाइल्स तयार होतात
+
 print('ok', [e['id'] for e in exams])

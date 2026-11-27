@@ -9,7 +9,7 @@ import { SUBJECTS, EXAMS, QUESTIONS, loadBank, full } from './questions.js';
 import { store, today } from './store.js';
 import { OWL_SVG, greeting, motto, owl, owlLine } from './mascot.js';
 import { createNikal } from './nikal.js';
-import { loadNotices, noticesFor, nextFor, noticesUpdated } from './notices.js';
+import { loadNotices, noticesFor, nextFor, noticesUpdated, noticeById } from './notices.js';
 import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
 import { backend } from './backend.js';
@@ -66,7 +66,7 @@ let rankExam = '';
 const rankCache = {};     // key → { at, list, mine }
 
 const exam = () => examById[store.get().exam] || EXAMS[0];
-const nikal = createNikal({ backend, go: (v) => go(v), render: () => render(), toast: (m) => toast(m), confirmBox: (...a) => confirmBox(...a), exam, tabbar: () => tabbar(), user: () => user });
+const nikal = createNikal({ backend, go: (v) => go(v), render: () => render(), toast: (m) => toast(m), confirmBox: (...a) => confirmBox(...a), exam, tabbar: () => tabbar(), user: () => user, noticeById });
 
 // ---------- विषय व प्रश्नसंच ----------
 const baseIds = (sid) => subj[sid].pool || [sid];
@@ -1359,7 +1359,7 @@ app.innerHTML = `<div class="splash">${OWL_SVG}<h1 class="splash-hi">${greeting(
 const minSplash = new Promise((r) => setTimeout(r, 1800));
 Promise.all([loadBank(), minSplash]).then(() => {
   booted = true;
-  loadNotices(() => { if (view === 'home' || view === 'exams') render(); });
+  loadNotices(() => { if (view === 'home' || view === 'exams' || view === 'nikal') render(); });
   loadPyqIndex().then(() => { if (view === 'home' || view === 'pyq') render(); });
   nikal.loadIndex().then(() => { if (view === 'home' || view === 'nikal') render(); });
   byId = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));

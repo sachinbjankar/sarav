@@ -9,7 +9,13 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const OPT = ['१', '२', '३', '४'];
 const fmt = (x) => mr((Math.round(x * 100) / 100).toString());
 
-export function createNikal({ backend, go, render, toast, confirmBox, exam, tabbar, user }) {
+const REMOTE = 'https://raw.githubusercontent.com/sachinbjankar/sarav/main/public/';
+const MONTHS = ['जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून', 'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर'];
+const dateMr = (t) => { const d = new Date(t); return `${mr(d.getDate())} ${MONTHS[d.getMonth()]} ${mr(d.getFullYear())}`; };
+const dayStart = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
+const DAY = 86400000;
+
+export function createNikal({ backend, go, render, toast, confirmBox, exam, tabbar, user, noticeById }) {
   let index = [];
   let cur = null;      // { meta, data, series, ans: [], showQ, qs }
   let result = null;   // { score, max, right, wrong, blank, stats, wrongList }
@@ -18,49 +24,125 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
   const loadDraft = (id) => { try { return JSON.parse(localStorage.getItem(draftKey(id))) || null; } catch (_) { return null; } };
   const saveDraft = () => { try { localStorage.setItem(draftKey(cur.meta.id), JSON.stringify({ series: cur.series, ans: cur.ans, submitted: cur.submitted || false })); } catch (_) { /* ignore */ } };
 
+  // वेळापत्रक: अ‍ॅपमधील प्रत, मग GitHub वरील ताजी प्रत (नवीन पेपर अ‍ॅप अपडेटशिवाय)
   async function loadIndex() {
     try { index = await (await fetch('nikal/index.json')).json(); } catch (_) { index = []; }
+    try {
+      const ctl = new AbortController(); setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch(`${REMOTE}nikal/index.json?t=${Math.floor(Date.now() / 600000)}`, { signal: ctl.signal });
+      if (r.ok) { const remote = await r.json(); if (Array.isArray(remote) && remote.length) index = remote.map((x) => ({ ...x, remote: true })); }
+    } catch (_) { /* ऑफलाइन */ }
   }
+  const fileUrl = (x) => (x.remote ? REMOTE + x.file : x.file);
+
+  // प्रत्येक परीक्षेची सध्याची स्थिती
+  function stateOf(x) {
+    if (x.sample) return { k: 'open', status: x.status };
+    const n = x.notice ? noticeById(x.notice) : null;
+    if (x.file) return { k: 'open', status: x.status, date: n?.date ? dayStart(n.date) : null };
+    if (!n?.date) return { k: 'tba', note: n?.note || 'तारीख अजून जाहीर झालेली नाही.' };
+    const examAt = dayStart(n.date), openAt = examAt + (x.openAfterDays ?? 2) * DAY, now = Date.now();
+    if (now < examAt) return { k: 'upcoming', examAt, openAt };
+    if (now < examAt + DAY) return { k: 'today', examAt, openAt };
+    if (now < openAt) return { k: 'waiting', examAt, openAt };
+    return { k: 'soon', examAt, openAt };
+  }
+  const cdBox = (to) => `<div class="cd" data-cd="${to}">${['दिवस', 'तास', 'मिनिटे', 'सेकंद'].map((l) => `<span><b>००</b><small>${l}</small></span>`).join('')}</div>`;
+  function tick() {
+    document.querySelectorAll('[data-cd]').forEach((el) => {
+      let ms = Math.max(0, Number(el.dataset.cd) - Date.now());
+      const p = [Math.floor(ms / DAY), Math.floor(ms / 3600000) % 24, Math.floor(ms / 60000) % 60, Math.floor(ms / 1000) % 60];
+      el.querySelectorAll('b').forEach((b, i) => { b.textContent = mr(String(p[i]).padStart(2, '0')); });
+    });
+    document.querySelectorAll('[data-cdmini]').forEach((el) => {
+      const ms = Math.max(0, Number(el.dataset.cdmini) - Date.now());
+      const d = Math.floor(ms / DAY), h = Math.floor(ms / 3600000) % 24, m = Math.floor(ms / 60000) % 60;
+      el.textContent = d > 0 ? `${mr(d)} दिवस ${mr(h)} तास` : `${mr(h)} तास ${mr(m)} मिनिटे`;
+    });
+  }
+  setInterval(tick, 1000);
+  const scheduled = () => index.filter((x) => !x.sample);
+  const sortFor = (eid) => (a, b) => {
+    const sa = stateOf(a), sb = stateOf(b);
+    const rel = (x) => (x.exams.includes(eid) ? 0 : 1);
+    const t = (s2) => (s2.k === 'open' ? 0 : s2.examAt ? 1 : 2);
+    return rel(a) - rel(b) || t(sa) - t(sb) || (sa.examAt || 9e15) - (sb.examAt || 9e15);
+  };
 
   function homeCard() {
     const e = exam();
-    const mine = index.filter((x) => x.exams.includes(e.id));
-    const latest = (mine[0] || index[0]);
-    if (!latest) return '';
+    const list = scheduled().sort(sortFor(e.id));
+    const top = list.find((x) => ['open', 'today', 'waiting', 'soon', 'upcoming'].includes(stateOf(x).k));
+    let sub = 'परीक्षेनंतर तुमचे गुण व रँक लगेच जाणून घ्या';
+    let right = '<span class="arrow">›</span>';
+    if (top) {
+      const st = stateOf(top);
+      if (st.k === 'open') { sub = `${esc(top.short)} • उत्तरे भरा व रँक पाहा`; right = '<span class="nk-live">LIVE</span>'; }
+      else if (st.k === 'today') sub = `${esc(top.short)} • आज परीक्षा! शुभेच्छा 💪`;
+      else if (st.k === 'waiting' || st.k === 'soon') sub = `${esc(top.short)} • रँक तपासणी लवकरच`;
+      else { sub = `${esc(top.short)} • परीक्षेला`; right = `<span class="nk-mini" data-cdmini="${st.examAt}"></span>`; }
+    }
+    setTimeout(tick, 0);
     return `<button class="nikal-card" data-act="tab" data-v="nikal">
       <span class="nk-trophy">🏆</span>
-      <span class="grow"><b>निकालापूर्वी निकाल</b><small>${esc(latest.short)} • तुमचे गुण व रँक आत्ताच जाणून घ्या</small></span>
-      <span class="arrow">›</span></button>`;
+      <span class="grow"><b>निकालापूर्वी निकाल</b><small>${sub}</small></span>${right}</button>`;
+  }
+
+  function examCard(x) {
+    const st = stateOf(x);
+    const sharable = st.examAt ? `<button class="btn ghost sm" data-act="nk-tell" data-id="${x.id}">📤 मित्रांना सांगा</button>` : '';
+    let body = '';
+    if (st.k === 'upcoming') body = `<small class="nk-lbl">परीक्षेला उरलेला वेळ</small>${cdBox(st.examAt)}
+      <p class="nk-when">📅 परीक्षा: <b>${dateMr(st.examAt)}</b><br>📝 उत्तरे भरणे सुरू: <b>${dateMr(st.openAt)}</b> (परीक्षेनंतर ${mr(x.openAfterDays ?? 2)} दिवसांनी)</p>
+      <button class="btn disabled">🔒 परीक्षेनंतर उघडेल</button>${sharable}`;
+    else if (st.k === 'today') body = `<p class="nk-today">आज परीक्षा! सर्वांना शुभेच्छा 💪</p><small class="nk-lbl">उत्तरे भरणे सुरू होण्यास</small>${cdBox(st.openAt)}
+      <p class="nk-when">पेपर झाल्यावर तुमची उत्तरे लक्षात ठेवा / प्रश्नपत्रिका जपून ठेवा 📄</p>${sharable}`;
+    else if (st.k === 'waiting') body = `<small class="nk-lbl">प्रश्नपत्रिका व उत्तरतालिका तयार होत आहे… उत्तरे भरणे सुरू होण्यास</small>${cdBox(st.openAt)}${sharable}`;
+    else if (st.k === 'soon') body = '<p class="nk-when">⏳ प्रश्नपत्रिका थोड्याच वेळात उपलब्ध होईल. पुन्हा तपासा.</p>';
+    else if (st.k === 'tba') body = `<p class="nk-when">🗓️ ${esc(st.note)}<br>तारीख जाहीर झाल्यावर येथे काउंटडाउन सुरू होईल.</p>`;
+    else {
+      const d = loadDraft(x.id);
+      body = `<p class="nk-when">${st.status === 'final' ? '✅ आयोगाची अंतिम उत्तरतालिका' : '🟠 तात्पुरती उत्तरतालिका — अंतिम आल्यावर गुण आपोआप अपडेट'}</p>
+        <button class="btn primary" data-act="nk-open" data-id="${x.id}">${d?.submitted ? '🏆 माझा निकाल पाहा' : d ? '✏️ उत्तरे भरणे सुरू ठेवा' : '📝 उत्तरे भरा व रँक पाहा'}</button>`;
+    }
+    const badge = { open: '<span class="nb hot">LIVE</span>', today: '<span class="nb warn">आज</span>', upcoming: '<span class="nb ok">आगामी</span>', waiting: '<span class="nb warn">लवकरच</span>', soon: '<span class="nb warn">लवकरच</span>', tba: '<span class="nb">तारीख अनिश्चित</span>' }[st.k];
+    return `<section class="nk-exam ${st.k}"><div class="nk-exam-top">${badge}</div><b class="nk-title">${esc(x.title)}</b>${body}</section>`;
   }
 
   function listView() {
     const e = exam();
-    const list = [...index].sort((a, b) => (b.exams.includes(e.id) - a.exams.includes(e.id)));
+    const list = scheduled().sort(sortFor(e.id));
+    const sample = index.find((x) => x.sample);
+    setTimeout(tick, 0);
     return `
     <header class="top slim"><button class="icon-btn" data-act="back">‹</button><h1>🏆 निकालापूर्वी निकाल</h1></header>
     <main class="wrap">
       <section class="nk-hero">
         <b>परीक्षा दिली? निकालाची वाट कशाला पाहायची!</b>
-        <ol><li>तुमची परीक्षा व प्रश्नपत्रिकेचा संच निवडा</li><li>तुम्ही दिलेली उत्तरे भरा (५ मिनिटे)</li><li>तुमचे गुण व सर्व विद्यार्थ्यांमधील रँक लगेच पाहा</li></ol>
+        <ol><li>परीक्षेनंतर २ दिवसांत येथे प्रश्नपत्रिका उपलब्ध होईल</li><li>तुम्ही परीक्षेत दिलेली उत्तरे भरा (५ मिनिटे)</li><li>तुमचे गुण व सर्व विद्यार्थ्यांमधील रँक लगेच पाहा</li></ol>
       </section>
-      ${list.map((x) => {
-        const d = loadDraft(x.id);
-        return `<button class="pyq-card" data-act="nk-open" data-id="${x.id}">
-          <span class="pyq-yr">${mr(x.date.slice(0, 4))}</span>
-          <span class="grow"><b>${esc(x.title)}</b>
-            <small>${mr(x.count)} प्रश्न • ${x.status === 'final' ? 'आयोगाची अंतिम उत्तरतालिका' : 'तात्पुरती उत्तरतालिका'}${x.demo ? ' • डेमो' : ''}</small>
-            ${d?.submitted ? '<small class="pyq-best">✅ उत्तरे भरली — निकाल पाहा</small>' : d ? '<small class="pyq-best">✏️ अर्धवट भरलेले</small>' : ''}
-          </span><span class="arrow">›</span></button>`;
-      }).join('') || '<p class="muted">पुढील परीक्षेनंतर लगेच येथे पेपर उपलब्ध होईल.</p>'}
-      <p class="muted small n-disc">हा फक्त अंदाज आहे. रँक ‘सराव’ वापरणाऱ्या विद्यार्थ्यांमधील आहे; अधिकृत निकाल व कट-ऑफ आयोगच जाहीर करेल.</p>
+      ${list.map(examCard).join('') || '<p class="muted">आगामी परीक्षा लवकरच येथे दिसतील.</p>'}
+      ${sample ? `<button class="nk-sample" data-act="nk-open" data-id="${sample.id}">👀 हे कसे काम करते? नमुना पाहा (${esc(sample.short.replace('नमुना: ', ''))})</button>` : ''}
+      <p class="muted small n-disc">हा फक्त अंदाज आहे. रँक ‘सराव’ वापरणाऱ्या विद्यार्थ्यांमधील आहे; अधिकृत निकाल व कट-ऑफ आयोगच जाहीर करेल. परीक्षांच्या तारखा आयोगाच्या सूचनांनुसार.</p>
     </main>${tabbar()}`;
+  }
+
+  async function tell(id) {
+    const x = index.find((y) => y.id === id); if (!x) return;
+    const st = stateOf(x);
+    const text = `📢 ${x.title}\n📅 परीक्षा: ${dateMr(st.examAt)}\n\nपरीक्षेनंतर ‘सराव’ अ‍ॅपवर ‘निकालापूर्वी निकाल’ मध्ये तुमची उत्तरे भरा आणि निकालाआधीच तुमचे गुण व रँक जाणून घ्या 🏆\nhttps://play.google.com/store/apps/details?id=in.sachivapps.sarav`;
+    try {
+      if (globalThis.Capacitor?.isNativePlatform?.()) { const { Share } = await import('@capacitor/share'); await Share.share({ text }); }
+      else if (navigator.share) await navigator.share({ text });
+      else { await navigator.clipboard.writeText(text); toast('मजकूर कॉपी झाला — WhatsApp मध्ये पेस्ट करा'); }
+    } catch (_) { /* रद्द */ }
   }
 
   async function open(id) {
     const meta = index.find((x) => x.id === id);
     if (!meta) return;
     let data;
-    try { data = await (await fetch(meta.file)).json(); } catch (_) { return toast('माहिती उघडता आली नाही'); }
+    try { data = await (await fetch(fileUrl(meta))).json(); } catch (_) { return toast('माहिती उघडता आली नाही'); }
     const d = loadDraft(id);
     cur = { meta, data, series: d?.series || meta.series[0], ans: d?.ans || Array(data.count).fill(null), showQ: false, qs: null, submitted: d?.submitted };
     if (cur.submitted) return showResult();
@@ -70,7 +152,7 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
   async function toggleQ() {
     cur.showQ = !cur.showQ;
     if (cur.showQ && !cur.qs && cur.data.qfile) {
-      try { const p = await (await fetch(cur.data.qfile)).json(); cur.qs = Object.fromEntries(p.q.map((q) => [q.n, q])); } catch (_) { cur.qs = {}; }
+      try { const p = await (await fetch(cur.meta.remote ? REMOTE + cur.data.qfile : cur.data.qfile)).json(); cur.qs = Object.fromEntries(p.q.map((q) => [q.n, q])); } catch (_) { cur.qs = {}; }
     }
     render();
   }
@@ -219,6 +301,7 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
       case 'nk-submit': await submit(); return true;
       case 'nk-edit': cur.submitted = false; saveDraft(); go('nikal-entry'); return true;
       case 'nk-share': await share(); return true;
+      case 'nk-tell': await tell(el.dataset.id); return true;
       default: return false;
     }
   }

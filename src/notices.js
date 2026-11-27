@@ -50,3 +50,5 @@ export function nextFor(examId) {
   const urgent = up.find((x) => x.left <= 7);
   return urgent || up.find((x) => x.kind === 'exam') || up[0] || null;
 }
+
+export const noticeById = (id) => (data?.items || []).find((x) => x.id === id) || null;
