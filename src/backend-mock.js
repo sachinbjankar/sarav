@@ -9,6 +9,7 @@ db.users ||= {};      // email → { uid, name, password }
 db.players ||= {};    // uid → player
 db.progress ||= {};
 db.session ||= null;
+db.nikal ||= {};      // examId → { id → score } (फक्त या फोनवर)
 const save = () => { try { localStorage.setItem(K, JSON.stringify(db)); } catch (_) { /* ignore */ } };
 
 const SAMPLE = [
@@ -74,6 +75,21 @@ export const backend = {
     save();
   },
 
+  // ---- निकालापूर्वी निकाल ----
+  // डेमो: खऱ्या विद्यार्थ्यांऐवजी नमुना वितरण (स्पष्टपणे "डेमो" म्हणून दाखवले जाते).
+  async nikalSubmit(examId, entryId, score) {
+    await wait(); (db.nikal[examId] ||= {})[entryId] = score; save();
+  },
+  async nikalStats(examId, score, maxScore) {
+    await wait();
+    // ठरावीक (seeded) सामान्य वितरण: सरासरी ~४२%, फरक ~१४%, १८,६०० नमुना विद्यार्थी
+    const N = 18600, mu = 0.42 * maxScore, sd = 0.14 * maxScore;
+    const cdf = (x) => 0.5 * (1 + erf((x - mu) / (sd * Math.SQRT2)));
+    const above = Math.round(N * (1 - cdf(score)));
+    const bins = 20, w = maxScore / bins, hist = [];
+    for (let i = 0; i < bins; i++) hist.push(Math.round(N * (cdf((i + 1) * w) - cdf(i * w))));
+    return { rank: Math.max(1, above + 1), total: N + 1, hist, demo: true };
+  },
   async leaderboard(exam, period) {
     await wait();
     const f = scoreField(exam, period);
@@ -87,3 +103,9 @@ export const backend = {
     return list.filter((x) => x.pts > pts).length + 1;
   },
 };
+
+function erf(x) { // Abramowitz–Stegun
+  const t = 1 / (1 + 0.3275911 * Math.abs(x));
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  return x >= 0 ? y : -y;
+}

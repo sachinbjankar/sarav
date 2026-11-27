@@ -1,0 +1,18 @@
+[
+ {
+  "id": "rajya2023-gs1",
+  "title": "राज्यसेवा पूर्व परीक्षा 2023 — सामान्य अध्ययन पेपर 1",
+  "short": "राज्यसेवा पूर्व 2023 • पेपर 1",
+  "exams": [
+   "mpsc"
+  ],
+  "date": "2023-06-04",
+  "count": 100,
+  "status": "final",
+  "demo": true,
+  "file": "nikal/rajya2023-gs1.json",
+  "series": [
+   "A"
+  ]
+ }
+]

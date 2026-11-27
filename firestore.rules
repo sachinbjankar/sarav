@@ -55,5 +55,16 @@ service cloud.firestore {
     match /users/{uid} {
       allow read, write: if isMe(uid);
     }
+
+    // निकालापूर्वी निकाल: प्रत्येकाला एकच नोंद; सर्वजण मोजणी (रँक) वाचू शकतात
+    match /nikal/{examId}/entries/{uid} {
+      allow read: if true;
+      allow create, update: if isMe(uid)
+        && request.resource.data.keys().hasOnly(['score', 'at'])
+        && request.resource.data.score is number
+        && request.resource.data.score >= -100 && request.resource.data.score <= 400
+        && request.resource.data.at == request.time;
+      allow delete: if isMe(uid);
+    }
   }
 }

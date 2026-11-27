@@ -1,6 +1,7 @@
 // खरा backend: Firebase Auth (ईमेल + पासवर्ड) आणि Cloud Firestore (मोफत Spark प्लॅन पुरेसा).
 // माहितीची रचना (नियम: firestore.rules):
 //   players/{uid}  सार्वजनिक: { name, dist, tot, tests, last, lastExam, t_<exam>, w<week>_<exam> }  ← रँकिंगसाठी
+//   nikal/{exam}/entries/{uid}  { score, at }                                             ← निकालापूर्वी निकाल
 //   users/{uid}    खासगी:     { progress: {...}, updatedAt }                                       ← फक्त त्या व्यक्तीला दिसते
 import { initializeApp } from 'firebase/app';
 import {
@@ -84,6 +85,22 @@ export const backend = {
     return snap.docs.map((d) => ({ uid: d.id, name: d.data().name, dist: d.data().dist, pts: d.data()[f] || 0 }));
   },
 
+  // ---- निकालापूर्वी निकाल: एका परीक्षेसाठी प्रति वापरकर्ता एक नोंद ----
+  async nikalSubmit(examId, _entryId, score) {
+    const u = auth.currentUser; if (!u) throw Object.assign(new Error('auth-required'), { code: 'auth-required' });
+    await setDoc(doc(db, 'nikal', examId, 'entries', u.uid), { score, at: serverTimestamp() });
+  },
+  async nikalStats(examId, score, maxScore) {
+    const col = collection(db, 'nikal', examId, 'entries');
+    const [above, total] = await Promise.all([
+      getCountFromServer(query(col, where('score', '>', score))),
+      getCountFromServer(col),
+    ]);
+    const bins = 20, w = maxScore / bins;
+    const hist = await Promise.all(Array.from({ length: bins }, (_, i) =>
+      getCountFromServer(query(col, where('score', '>=', i * w), where('score', '<', i === bins - 1 ? maxScore + 1 : (i + 1) * w))).then((c) => c.data().count)));
+    return { rank: above.data().count + 1, total: total.data().count, hist, demo: false };
+  },
   async rankOf(exam, period, pts) {
     if (!pts) return null;
     const f = scoreField(exam, period);

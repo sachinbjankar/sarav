@@ -8,6 +8,7 @@ import { Capacitor } from '@capacitor/core';
 import { SUBJECTS, EXAMS, QUESTIONS, loadBank, full } from './questions.js';
 import { store, today } from './store.js';
 import { OWL_SVG, greeting, motto, owl, owlLine } from './mascot.js';
+import { createNikal } from './nikal.js';
 import { loadNotices, noticesFor, nextFor, noticesUpdated } from './notices.js';
 import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
@@ -65,6 +66,7 @@ let rankExam = '';
 const rankCache = {};     // key → { at, list, mine }
 
 const exam = () => examById[store.get().exam] || EXAMS[0];
+const nikal = createNikal({ backend, go: (v) => go(v), render: () => render(), toast: (m) => toast(m), confirmBox: (...a) => confirmBox(...a), exam, tabbar: () => tabbar(), user: () => user });
 
 // ---------- विषय व प्रश्नसंच ----------
 const baseIds = (sid) => subj[sid].pool || [sid];
@@ -475,6 +477,7 @@ async function back() {
   } else if (view === 'review') go('result');
   else if (view === 'result' && quiz?.mode === 'level') { pathSid = quiz.sid; quiz = null; go('path'); scrollToCurrent(); }
   else if (view === 'auth') go('me');
+  else if (nikal.backTarget(view)) go(nikal.backTarget(view));
   else if (view === 'pick' && !store.get().exam) {
     /* पहिल्यांदा परीक्षा निवडल्याशिवाय पुढे नाही */
   } else if (view !== 'home') go('home');
@@ -586,11 +589,12 @@ function homeView() {
       <button class="btn light" data-act="start" data-mode="daily">${doneToday ? 'पुन्हा सोडवा' : 'सुरू करा'}</button>
     </section>
 
+    ${nikal.homeCard()}
     ${examStrip(e)}
 
     ${user ? '' : `
     <button class="join-strip" data-act="tab" data-v="auth">
-      <span>🏆</span><span class="grow"><b>रँकिंगमध्ये नाव झळकवा</b><small>मोफत खाते तयार करा • प्रगती कायमची जतन</small></span><span class="arrow">›</span>
+      <span>🏆</span><span class="grow"><b>${backend.kind === 'mock' ? 'तुमचे नाव जोडा' : 'रँकिंगमध्ये नाव झळकवा'}</b><small>${backend.kind === 'mock' ? 'सर्वांची एकत्र रँकिंग लवकरच सुरू होईल' : 'मोफत खाते तयार करा • प्रगती कायमची जतन'}</small></span><span class="arrow">›</span>
     </button>`}
 
     <section class="mini-stats">
@@ -928,8 +932,9 @@ function meView() {
       <div><b>${mr(player?.tot || 0)}</b><span>एकूण गुण</span></div>
     </section>` : `
     <section class="auth-card">
-      <h2>तुमची प्रगती सुरक्षित ठेवा</h2>
-      <ul><li>🏆 रँकिंगमध्ये नाव व क्रमांक</li><li>📈 सर्व चाचण्यांचे निकाल कायमचे जतन</li><li>📱 फोन बदलला तरी प्रगती तशीच</li></ul>
+      ${backend.kind === 'mock' ? `<h2>तुमचे नाव जोडा</h2>
+      <ul><li>📈 तुमची प्रगती या फोनवर जतन होते</li><li>🏆 सर्वांची एकत्र रँकिंग — लवकरच</li><li>☁️ फोन बदलला तरी प्रगती तशीच — लवकरच</li></ul>` : `<h2>तुमची प्रगती सुरक्षित ठेवा</h2>
+      <ul><li>🏆 रँकिंगमध्ये नाव व क्रमांक</li><li>📈 सर्व चाचण्यांचे निकाल कायमचे जतन</li><li>📱 फोन बदलला तरी प्रगती तशीच</li></ul>`}
       <div class="row2"><button class="btn primary" data-act="auth-mode" data-v="signup">खाते तयार करा</button><button class="btn ghost" data-act="auth-mode" data-v="login">लॉगिन</button></div>
     </section>`;
 
@@ -1168,6 +1173,8 @@ async function startPyq(id) {
   if (!paper) {
     try { paper = await (await fetch(meta.file)).json(); pyqCache.set(id, paper); } catch (_) { toast('पेपर उघडता आला नाही'); return; }
   }
+  // पेपर सुरू होण्यापूर्वी एक पूर्ण-स्क्रीन जाहिरात (मागील जाहिरात ४५ सेकंदांपूर्वीची असल्यास); टायमर जाहिरातीनंतरच सुरू होतो
+  await maybeInterstitial(1, 45);
   const L = ['१', '२', '३', '४'];
   const items = paper.q.map((x) => ({
     q: { id: `pyq:${id}:${x.n}`, s: x.s, q: `प्र. ${mr(x.n)}. ${x.q}`, o: x.o, img: x.img, e: `योग्य उत्तर: (${L[x.a]}) ${x.o[x.a]}\n(आयोगाची अंतिम उत्तरतालिका)` },
@@ -1233,6 +1240,7 @@ function render(keepAnim = false) {
   const views = {
     pick: pickView, home: homeView, path: pathView, quiz: () => quizView(!keepAnim), result: resultView, review: reviewView,
     saved: savedView, rank: rankView, me: meView, auth: authView, exams: examsView, pyq: pyqView,
+    nikal: nikal.listView, 'nikal-entry': nikal.entryView, 'nikal-result': nikal.resultView,
   };
   app.innerHTML = (views[view] || homeView)();
   app.dataset.view = view;
@@ -1254,6 +1262,7 @@ document.addEventListener('click', async (e) => {
   }
   if (act === 'modal-no') { if (e.target === el) closeModal(false); return; }
   if (el.classList.contains('disabled')) return;
+  if (act.startsWith('nk-') && await nikal.click(act, el)) return;
 
   switch (act) {
     case 'mock-info': {
@@ -1352,6 +1361,7 @@ Promise.all([loadBank(), minSplash]).then(() => {
   booted = true;
   loadNotices(() => { if (view === 'home' || view === 'exams') render(); });
   loadPyqIndex().then(() => { if (view === 'home' || view === 'pyq') render(); });
+  nikal.loadIndex().then(() => { if (view === 'home' || view === 'nikal') render(); });
   byId = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
   poolCache.clear();
   go(store.get().exam ? 'home' : 'pick');
