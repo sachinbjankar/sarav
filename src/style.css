@@ -627,3 +627,16 @@ html.native body.has-banner::after { display: none; }
 .nk-exam .btn.disabled { opacity: .55; pointer-events: none; }
 .btn.sm { min-height: 40px; font-size: 15px; }
 .nk-sample { width: 100%; background: transparent; border: 1.5px dashed #C9CDE0; border-radius: 14px; padding: 12px; color: var(--navy); font-weight: 700; margin-top: 6px; }
+/* उत्तरे भरण्याच्या पद्धती */
+.nk-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #EEF0F7; border-radius: 14px; padding: 4px; }
+.nk-modes button { border: 0; background: transparent; border-radius: 11px; padding: 9px 4px; font-weight: 700; color: var(--navy); font-size: 14px; line-height: 1.2; }
+.nk-modes button.on { background: #fff; box-shadow: 0 2px 8px rgba(30,42,90,.12); }
+.nk-modes button.soon { color: var(--muted); } .nk-modes small { display: block; font-size: 11px; }
+.nk-type { background: var(--card); border: 1.5px solid var(--line); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.nk-type-help { margin: 0; line-height: 1.6; font-size: 14.5px; } .nk-type-help code { background: #EEF0F7; border-radius: 6px; padding: 1px 6px; font-size: 15px; }
+#nk-type { width: 100%; font-size: 24px; letter-spacing: 2px; font-family: ui-monospace, monospace; border: 2px solid #C9CDE0; border-radius: 14px; padding: 12px; resize: vertical; }
+#nk-type:focus { outline: none; border-color: var(--navy); }
+.nk-type-msg { margin: 0; font-weight: 700; min-height: 1.2em; }
+.nk-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.nk-grid i { aspect-ratio: 1; border-radius: 7px; background: #EEF0F7; display: grid; place-items: center; font-style: normal; font-size: 13px; font-weight: 800; color: #fff; }
+.nk-grid i.ok { background: var(--navy); } .nk-grid i.sk { background: #8A8FA8; } .nk-grid i.cx { background: repeating-linear-gradient(45deg,#E6E2D8,#E6E2D8 4px,#F3F0E8 4px,#F3F0E8 8px); }

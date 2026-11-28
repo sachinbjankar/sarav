@@ -157,8 +157,47 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
     render();
   }
 
+  // ---- ⌨️ झटपट टाइप: प्रश्न १ पासून क्रमाने अंक; १–४ = पर्याय, ० = सोडला; जागा/स्वल्पविराम चालतात ----
+  const DEV = { '०': '0', '१': '1', '२': '2', '३': '3', '४': '4', '५': '5', '६': '6', '७': '7', '८': '8', '९': '9' };
+  const ansToStr = () => {
+    let out = '';
+    for (const a of cur.ans) { if (a === null) break; out += a === -1 ? '0' : String(a + 1); }
+    return out.replace(/(.{5})/g, '$1 ').trim();
+  };
+  function parseType(v) {
+    const digits = [...v].map((c) => DEV[c] ?? c).filter((c) => /[0-9]/.test(c));
+    let bad = 0;
+    const ans = Array(cur.data.count).fill(null);
+    digits.slice(0, cur.data.count).forEach((d, i) => { const n = Number(d); if (n === 0) ans[i] = -1; else if (n <= 4) ans[i] = n - 1; else bad++; });
+    return { ans, typed: Math.min(digits.length, cur.data.count), bad, extra: Math.max(0, digits.length - cur.data.count) };
+  }
+  function gridCells(key) {
+    return cur.ans.map((a, i) => `<i class="${key[i] === null ? 'cx' : a === null ? '' : a === -1 ? 'sk' : 'ok'}" title="${i + 1}">${a === null || a === -1 ? '' : OPT[a]}</i>`).join('');
+  }
+  function typeBox(key) {
+    return `<section class="nk-type">
+      <p class="nk-type-help"><b>प्रश्न १ पासून क्रमाने</b> तुमचे पर्याय टाइप करा: <b>१–४</b> = पर्याय, <b>०</b> = सोडला.<br>उदा. <code>24130 31214</code> (जागा सोडली तरी चालते)</p>
+      <textarea id="nk-type" inputmode="numeric" autocomplete="off" spellcheck="false" rows="4" placeholder="उदा. 24130 31214 4…">${ansToStr()}</textarea>
+      <p class="nk-type-msg" id="nk-type-msg"></p>
+      <div class="nk-grid" id="nk-grid">${gridCells(key)}</div>
+      <small class="muted">रद्द प्रश्नांसाठीही (राखाडी) तुम्ही पेपरवर दिलेला अंक टाइप करा — क्रम चुकू नये म्हणून. त्यांचे गुण धरले जात नाहीत.</small>
+    </section>`;
+  }
+  function onType(v) {
+    const key = cur.data.series[cur.series].key;
+    const r = parseType(v);
+    cur.ans = r.ans; saveDraft();
+    const g = document.getElementById('nk-grid'); if (g) g.innerHTML = gridCells(key);
+    const m = document.getElementById('nk-type-msg');
+    if (m) m.innerHTML = r.bad ? `⚠️ ${mr(r.bad)} चुकीचे अंक (५–९) — फक्त ०–४ वापरा` : r.extra ? `⚠️ ${mr(r.extra)} अंक जास्त आहेत — फक्त पहिले ${mr(cur.data.count)} धरले` : `✅ ${mr(r.typed)}/${mr(cur.data.count)} प्रश्न भरले`;
+    const bar = document.querySelector('.nk-bar b'); if (bar) bar.textContent = mr(r.ans.filter((a) => a !== null).length);
+  }
+  document.addEventListener('input', (e) => { if (e.target?.id === 'nk-type' && cur) onType(e.target.value); });
+  let mode = 'tap';
+
   function entryView() {
     const { meta, data, ans, series } = cur;
+    if (mode === 'type') setTimeout(() => { const t = document.getElementById('nk-type'); if (t) onType(t.value); }, 0);
     const key = data.series[series].key;
     const filled = ans.filter((a) => a !== null).length;
     const rows = ans.map((a, i) => {
@@ -182,10 +221,15 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
           ${['A', 'B', 'C', 'D'].map((s) => `<button class="nk-chip ${s === series ? 'on' : ''} ${data.series[s] ? '' : 'disabled'}" data-act="nk-series" data-s="${s}">${s}</button>`).join('')}
         </div>
         ${Object.keys(data.series).length < 4 ? '<small class="muted">या पेपरसाठी सध्या फक्त संच ' + Object.keys(data.series).join(', ') + ' उपलब्ध</small>' : ''}
-        <label class="nk-toggle"><input type="checkbox" data-act="nk-showq" ${cur.showQ ? 'checked' : ''}> प्रश्नही दाखवा</label>
-        <small class="muted">प्रत्येक प्रश्नासाठी तुम्ही परीक्षेत निवडलेला पर्याय दाबा. उत्तर दिले नसल्यास ‘सोडला’.</small>
+        <div class="nk-modes">
+          <button class="${mode === 'tap' ? 'on' : ''}" data-act="nk-mode" data-m="tap">👆 टॅप करा</button>
+          <button class="${mode === 'type' ? 'on' : ''}" data-act="nk-mode" data-m="type">⌨️ झटपट टाइप</button>
+          <button class="soon" data-act="nk-mode" data-m="scan">📷 स्कॅन <small>लवकरच</small></button>
+        </div>
+        ${mode === 'tap' ? `<label class="nk-toggle"><input type="checkbox" data-act="nk-showq" ${cur.showQ ? 'checked' : ''}> प्रश्नही दाखवा</label>
+        <small class="muted">प्रत्येक प्रश्नासाठी तुम्ही परीक्षेत निवडलेला पर्याय दाबा. उत्तर दिले नसल्यास ‘सोडला’.</small>` : ''}
       </section>
-      ${rows}
+      ${mode === 'type' ? typeBox(key) : rows}
     </main>
     <div class="nk-bar"><span><b>${mr(filled)}</b>/${mr(data.count)} भरले</span><button class="btn primary" data-act="nk-submit">निकाल पाहा 🏆</button></div>`;
   }
@@ -302,6 +346,9 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
       case 'nk-edit': cur.submitted = false; saveDraft(); go('nikal-entry'); return true;
       case 'nk-share': await share(); return true;
       case 'nk-tell': await tell(el.dataset.id); return true;
+      case 'nk-mode':
+        if (el.dataset.m === 'scan') { toast('📷 OMR प्रत स्कॅन करण्याची सुविधा लवकरच येत आहे'); return true; }
+        mode = el.dataset.m; render(); return true;
       default: return false;
     }
   }
