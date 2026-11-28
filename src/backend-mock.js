@@ -77,6 +77,9 @@ export const backend = {
 
   // ---- निकालापूर्वी निकाल ----
   // डेमो: खऱ्या विद्यार्थ्यांऐवजी नमुना वितरण (स्पष्टपणे "डेमो" म्हणून दाखवले जाते).
+  // आमंत्रण: सर्व्हरशिवाय फक्त या फोनवर नोंद (मित्राच्या बक्षिसाची पडताळणी Firebase मध्ये)
+  async referClaim(code) { await wait(); db.refUsed = code; save(); },
+  async referCount() { return 0; },
   async nikalSubmit(examId, entryId, score) {
     await wait(); (db.nikal[examId] ||= {})[entryId] = score; save();
   },
