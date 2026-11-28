@@ -10,6 +10,7 @@ import { store, today } from './store.js';
 import { OWL_SVG, greeting, motto, owl, owlLine } from './mascot.js';
 import { createNikal } from './nikal.js';
 import { createTyping } from './typing.js';
+import { syllabusCard, syllabusView } from './syllabus.js';
 import { loadNotices, noticesFor, nextFor, noticesUpdated, noticeById } from './notices.js';
 import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
@@ -227,6 +228,7 @@ const wrongQuestions = (e) => {
   return examPool(e).filter((q) => ans[q.id] && !ans[q.id].last);
 };
 
+let sylId = null;
 // ---------- 🎁 मित्रांना आमंत्रण ----------
 const PLAY_URL = 'https://play.google.com/store/apps/details?id=in.sachivapps.sarav';
 async function shareInvite() {
@@ -493,6 +495,7 @@ async function back() {
   } else if (view === 'review') go('result');
   else if (view === 'result' && quiz?.mode === 'level') { pathSid = quiz.sid; quiz = null; go('path'); scrollToCurrent(); }
   else if (view === 'auth') go('me');
+  else if (view === 'syllabus') go('pyq');
   else if (nikal.backTarget(view)) go(nikal.backTarget(view));
   else if (typing.isTyping(view)) { const t = await typing.backTarget(view); if (t) go(t); }
   else if (view === 'pick' && !store.get().exam) {
@@ -1206,6 +1209,7 @@ function pyqView() {
       <button class="${pyqAll ? '' : 'on'}" data-act="pyq-scope" data-all="0">${esc(e.name)}</button>
       <button class="${pyqAll ? 'on' : ''}" data-act="pyq-scope" data-all="1">सर्व परीक्षा</button>
     </div>
+    ${syllabusCard(e.id)}
     ${!pyqAll && !mine.length ? `<p class="muted">${esc(e.name)} च्या प्रश्नपत्रिका लवकरच जोडल्या जातील. तोपर्यंत इतर परीक्षांचे पेपर सोडवू शकता:</p>` : ''}
     ${list.map((p) => {
       const s2 = st[p.id];
@@ -1298,7 +1302,7 @@ function render(keepAnim = false) {
     pick: pickView, home: homeView, path: pathView, quiz: () => quizView(!keepAnim), result: resultView, review: reviewView,
     saved: savedView, rank: rankView, me: meView, auth: authView, exams: examsView, pyq: pyqView,
     nikal: nikal.listView, 'nikal-entry': nikal.entryView, 'nikal-result': nikal.resultView,
-    typing: typing.listView, 'typing-run': typing.runView, 'typing-result': typing.resultView,
+    typing: typing.listView, syllabus: () => syllabusView(sylId, tabbar), 'typing-run': typing.runView, 'typing-result': typing.resultView,
   };
   app.innerHTML = (views[view] || homeView)();
   app.dataset.view = view;
@@ -1339,6 +1343,7 @@ document.addEventListener('click', async (e) => {
     case 'fifty': return useFifty();
     case 'exit':
     case 'back': return back();
+    case 'syl-open': sylId = el.dataset.id; return go('syllabus');
     case 'refer-share': return shareInvite();
     case 'refer-copy':
       try { await navigator.clipboard.writeText(PLAY_URL); toast('लिंक कॉपी झाली'); } catch (_) { toast(PLAY_URL); }
