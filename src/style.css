@@ -726,3 +726,34 @@ html.native body.has-banner::after { display: none; }
 .ty-check .miss { background: #FFF3C4; color: #7A5B00; border-radius: 6px; padding: 0 3px; }
 .ty-check .extra { background: #EFE6FF; color: #5B2FA6; border-radius: 6px; padding: 0 3px; font-size: 14px; }
 .ty-check .rest { color: #A8B0C0; }
+
+/* 🎁 आमंत्रण कार्ड */
+.btn.wide { width: 100%; }
+.ref-card { background: linear-gradient(160deg, #FFF8E6, var(--card)); border: 1.5px solid #F3D98A; border-radius: 18px; padding: 14px; margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.ref-h { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
+.ref-h > span { font-size: 34px; }
+.ref-h b { display: block; font-size: 16px; color: var(--navy); }
+.ref-h small { color: var(--muted); line-height: 1.4; }
+
+/* 📝/💡 मोड निवड */
+.mode-title { margin: 0 0 2px; color: var(--navy); font-size: 17px; line-height: 1.4; }
+.mode-sub { margin: 0 0 12px; }
+.mode-card { display: flex; gap: 12px; align-items: flex-start; width: 100%; text-align: left; background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 12px; margin-bottom: 10px; color: var(--ink); }
+.mode-card .grow { flex: 1; min-width: 0; }
+.mode-card b { display: block; font-size: 16px; color: var(--navy); }
+.mode-card small { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.mode-card.learn { border-color: #F3C453; background: #FFFBEF; }
+.mode-ico { font-size: 28px; line-height: 1; }
+.mock-clock.learn { background: #FFF3C4; color: #7A5B00; }
+/* सविस्तर स्पष्टीकरण */
+.xp-sec { margin-top: 10px; }
+.xp-sec:first-of-type { margin-top: 4px; }
+.xp-sec > b { display: block; font-size: 14px; color: var(--navy); margin-bottom: 3px; }
+.xp-sec p { margin: 0; line-height: 1.65; }
+.xp-opts { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.xp-opts li { display: flex; gap: 8px; background: rgba(255,255,255,.7); border-radius: 10px; padding: 7px 9px; line-height: 1.55; font-size: 14px; }
+.xp-opts li > span { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #E8EBF3; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+.xp-opts li i { font-style: normal; font-weight: 700; }
+.xp-opts li em { font-style: normal; color: #C62828; font-size: 12px; }
+.xp-opts li.mine { background: #FDECEC; }
+.ex.rich { background: #FFFBEF; border-radius: 12px; padding: 10px 12px; }

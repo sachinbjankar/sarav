@@ -227,8 +227,19 @@ const wrongQuestions = (e) => {
   return examPool(e).filter((q) => ans[q.id] && !ans[q.id].last);
 };
 
+// ---------- 🎁 मित्रांना आमंत्रण ----------
+const PLAY_URL = 'https://play.google.com/store/apps/details?id=in.sachivapps.sarav';
+async function shareInvite() {
+  const text = `मी MPSC, तलाठी व पोलीस भरतीची तयारी ‘सराव’ अ‍ॅपवर करतोय 📚\n✅ रोज नवीन प्रश्नमंजुषा\n✅ मागील वर्षांच्या प्रश्नपत्रिका — स्पष्टीकरणासह\n✅ निकालापूर्वी निकाल — परीक्षेनंतर लगेच अंदाजित गुण व रँक\n✅ टायपिंग सराव\nसगळे मोफत! तूही डाउनलोड कर 👇\n${PLAY_URL}&referrer=utm_source%3Dinvite`;
+  try {
+    if (Capacitor.isNativePlatform()) { const { Share } = await import('@capacitor/share'); await Share.share({ text }); }
+    else if (navigator.share) await navigator.share({ text });
+    else { await navigator.clipboard.writeText(text); toast('संदेश कॉपी झाला — WhatsApp वर पेस्ट करा'); }
+  } catch (_) { /* रद्द */ }
+}
+
 // ---------- चाचणी ----------
-function startQuiz(mode, sid, lvl) {
+function startQuiz(mode, sid, lvl, learn = false) {
   const e = exam();
   let items;
   let title;
@@ -270,7 +281,7 @@ function startQuiz(mode, sid, lvl) {
   const ranked = (mode === 'daily' && !retry) || (mode === 'level' && !retry) || mode === 'subject' || mode === 'mixed';
   const mock = mode === 'mock' ? MOCK[e.id] : null;
   quiz = {
-    mode, sid, title, items, retry, ranked, exam: e.id, lvl: Number(lvl), mock,
+    mode, sid, title, items, retry, ranked, exam: e.id, lvl: Number(lvl), mock, learn: !!(mock && learn),
     deadline: mock ? Date.now() + mock.mins * 60000 : 0,
     i: 0,
     answers: items.map(() => null),
@@ -285,6 +296,7 @@ function startQuiz(mode, sid, lvl) {
 const clock = (ms) => { const t = Math.max(0, Math.round(ms / 1000)); const h = Math.floor(t / 3600); const m = Math.floor((t % 3600) / 60); const sec = t % 60; return `${h ? `${mr(h)}:` : ''}${mr(String(m).padStart(h ? 2 : 1, '0'))}:${mr(String(sec).padStart(2, '0'))}`; };
 function startTimer() {
   if (quiz && quiz.mock) {
+    if (quiz.learn) return;
     if (timer) return;
     timer = setInterval(() => {
       if (!quiz || !quiz.mock) return stopTimer();
@@ -315,7 +327,9 @@ function startTimerKeep() { const keep = quiz.left; startTimer(); quiz.left = ke
 function answer(choice) {
   if (quiz && quiz.mock) {
     const it = quiz.items[quiz.i];
+    if (quiz.learn && quiz.answers[quiz.i]) return;
     quiz.answers[quiz.i] = { choice, ok: choice === it.correct };
+    if (quiz.learn && navigator.vibrate && choice !== it.correct) navigator.vibrate(60);
     render(true);
     return;
   }
@@ -353,7 +367,7 @@ async function useFifty() {
 
 async function next() {
   if (quiz.i < quiz.items.length - 1) { quiz.i++; go('quiz'); return; }
-  if (quiz.mock) {
+  if (quiz.mock && !quiz.learn) {
     const left = quiz.answers.filter((a) => !a).length;
     if (!(await confirmBox(left ? `${mr(left)} प्रश्न अजून सोडवायचे आहेत. पेपर जमा करायचा?` : 'पेपर जमा करायचा?', 'हो, जमा करा', 'नाही'))) return;
   }
@@ -370,7 +384,7 @@ async function finish() {
   }
   const score = quiz.answers.filter((a) => a && a.ok).length;
   quiz.score = score;
-  if (quiz.pyq) {
+  if (quiz.pyq && !quiz.learn) {
     const st = pyqStats();
     const cur = st[quiz.pyq] || { best: 0, n: 0 };
     st[quiz.pyq] = { best: Math.max(cur.best, score), n: cur.n + 1, last: score, at: Date.now() };
@@ -488,6 +502,29 @@ async function back() {
     const { App } = await import('@capacitor/app');
     App.exitApp();
   }
+}
+
+// ---------- 📝 परीक्षा मोड / 💡 स्पष्टीकरण मोड ----------
+const chooseMode = (title, examLines) => openModal(`
+  <h3 class="mode-title">${title}</h3>
+  <p class="muted small mode-sub">पेपर कसा सोडवायचा?</p>
+  <button class="mode-card" data-act="modal-pick" data-v="exam">
+    <span class="mode-ico">📝</span><span class="grow"><b>परीक्षा मोड</b><small>${examLines}</small></span>
+  </button>
+  <button class="mode-card learn" data-act="modal-pick" data-v="learn">
+    <span class="mode-ico">💡</span><span class="grow"><b>स्पष्टीकरण मोड</b><small>वेळेचे बंधन नाही • उत्तर दिल्यावर लगेच बरोबर/चूक • योग्य उत्तर का, पार्श्वभूमी व इतर पर्यायांची माहिती</small></span>
+  </button>
+  <div class="modal-btns"><button class="btn ghost" data-act="modal-no">नंतर</button></div>`);
+
+// सविस्तर स्पष्टीकरण: q.x = { why, bg, o: [पर्याय १..४ बद्दल टीप] } (पर्यायांचा मूळ क्रम); नसल्यास q.e
+function explainHtml(q, opts, correct, choice) {
+  const x = q.x;
+  if (!x) return `<p>${esc(q.e)}</p>`;
+  const ord = q.oi || opts.map((_, k) => k); // दाखवलेल्या पर्यायांचा मूळ क्रमांक
+  return `
+    ${x.why ? `<div class="xp-sec"><b>✅ योग्य उत्तर: (${LETTERS[correct]}) ${esc(opts[correct])}</b><p>${esc(x.why)}</p></div>` : `<p>${esc(q.e)}</p>`}
+    ${x.bg ? `<div class="xp-sec"><b>📚 पार्श्वभूमी</b><p>${esc(x.bg)}</p></div>` : ''}
+    ${x.o ? `<div class="xp-sec"><b>🔍 इतर पर्याय</b><ul class="xp-opts">${opts.map((o, k) => (k === correct || !x.o[ord[k]]) ? '' : `<li class="${k === choice ? 'mine' : ''}"><span>${LETTERS[k]}</span><div><i>${esc(o)}</i>${k === choice ? ' <em>(तुमचे उत्तर)</em>' : ''}<br>${esc(x.o[ord[k]])}</div></li>`).join('')}</ul></div>` : ''}`;
 }
 
 // ---------- संवाद / सूचना ----------
@@ -645,11 +682,13 @@ function mockView(animate) {
   const s = subj[it.q.s];
   const done = quiz.answers.filter(Boolean).length;
   const last = quiz.i === quiz.items.length - 1;
+  const learn = quiz.learn;
+  const shown = learn && a;
   return `
   <header class="qtop">
     <button class="icon-btn" data-act="exit" aria-label="बाहेर">✕</button>
     <div class="qprog"><i style="width:${(done / quiz.items.length) * 100}%"></i></div>
-    <div class="mock-clock">⏱ <span id="timer">${clock(quiz.deadline - Date.now())}</span></div>
+    ${learn ? `<div class="mock-clock learn">💡 ${mr(quiz.answers.filter((x) => x && x.ok).length)}/${mr(done)}</div>` : `<div class="mock-clock">⏱ <span id="timer">${clock(quiz.deadline - Date.now())}</span></div>`}
   </header>
   <main class="wrap quiz ${animate ? 'enter' : ''}">
     <div class="qmeta">
@@ -659,15 +698,22 @@ function mockView(animate) {
     <h2 class="qtext">${esc(it.q.q)}</h2>
     ${it.q.img ? `<img class="qimg" src="${esc(it.q.img)}" alt="आकृती">` : ''}
     <div class="opts">
-      ${it.opts.map((o, k) => `<button class="opt ${a && a.choice === k ? 'picked' : ''}" data-act="ans" data-k="${k}">
-          <span class="l">${LETTERS[k]}</span><span class="t">${esc(o)}</span></button>`).join('')}
+      ${it.opts.map((o, k) => {
+        const cls = shown ? (k === it.correct ? 'right' : k === a.choice ? 'wrong' : 'dim') : (a && a.choice === k ? 'picked' : '');
+        return `<button class="opt ${cls}" data-act="ans" data-k="${k}" ${shown ? 'disabled' : ''}>
+          <span class="l">${LETTERS[k]}</span><span class="t">${esc(o)}</span></button>`;
+      }).join('')}
     </div>
+    ${shown ? `<div class="explain ${a.ok ? 'ok' : 'no'}">
+        <div class="ex-head">${owl(a.ok ? 'correct' : 'wrong')}<b>${a.ok ? '✅ बरोबर!' : '❌ चूक'}</b></div>
+        ${explainHtml(it.q, it.opts, it.correct, a.choice)}
+      </div>` : ''}
     <div class="qactions three">
       <button class="btn ghost" data-act="prev" ${quiz.i ? '' : 'disabled'}>← मागील</button>
       ${quiz.pyq ? '<span></span>' : `<button class="btn ghost" data-act="save" aria-label="जतन करा">${store.isSaved(it.q.id) ? '⭐' : '☆'}</button>`}
-      <button class="btn primary" data-act="next">${last ? 'पेपर जमा करा' : a ? 'पुढील →' : 'सोडा →'}</button>
+      <button class="btn primary" data-act="next">${last ? (learn ? 'निकाल पहा' : 'पेपर जमा करा') : a ? 'पुढील →' : 'सोडा →'}</button>
     </div>
-    ${quiz.mock.neg ? `<p class="muted small center">चुकीच्या उत्तराला ${mr(quiz.mock.neg)} गुण वजा • उत्तर बदलता येते</p>` : '<p class="muted small center">उत्तर बदलता येते • निकाल शेवटी</p>'}
+    ${learn ? '<p class="muted small center">💡 स्पष्टीकरण मोड • वेळेचे बंधन नाही</p>' : quiz.mock.neg ? `<p class="muted small center">चुकीच्या उत्तराला ${mr(quiz.mock.neg)} गुण वजा • उत्तर बदलता येते</p>` : '<p class="muted small center">उत्तर बदलता येते • निकाल शेवटी</p>'}
   </main>`;
 }
 
@@ -704,7 +750,7 @@ function quizView(animate = true) {
     ${a ? `
       <div class="explain ${a.ok ? 'ok' : 'no'}">
         <div class="ex-head">${owl(a.ok ? 'correct' : 'wrong')}<b>${a.ok ? '✅ बरोबर!' : a.choice === -1 ? '⏰ वेळ संपली' : '❌ चूक'}</b></div>
-        <p>${esc(it.q.e)}</p>
+        ${explainHtml(it.q, it.opts, it.correct, a.choice)}
       </div>
       <div class="qactions">
         <button class="btn ghost" data-act="save">${saved ? '⭐ जतन केले' : '☆ जतन करा'}</button>
@@ -789,7 +835,7 @@ function reviewCard(q, opts, correct, choice, idx) {
     <ul>
       ${opts.map((o, k) => `<li class="${k === correct ? 'right' : k === choice ? 'wrong' : ''}"><span>${LETTERS[k]}</span>${esc(o)}</li>`).join('')}
     </ul>
-    <p class="ex">💡 ${esc(q.e)}</p>
+    ${q.x ? `<div class="ex rich">${explainHtml(q, opts, correct, choice)}</div>` : `<p class="ex">💡 ${esc(q.e)}</p>`}
   </article>`;
 }
 
@@ -947,6 +993,11 @@ function meView() {
   <main class="wrap">
     ${head}
     ${(() => { const u = userLevel(); return `<section class="lvl-card"><span class="lv-ring big" style="--p:${u.cur / u.need}"><b>${mr(u.L)}</b></span><div class="grow"><b>स्तर ${mr(u.L)}</b><small>पुढील स्तरासाठी ${mr(u.need - u.cur)} XP बाकी • एकूण ${mr(store.get().xp || 0)} XP</small><i class="bar" style="--c:var(--saffron)"><i style="width:${(u.cur / u.need) * 100}%"></i></i></div></section>`; })()}
+    <section class="ref-card">
+      <div class="ref-h"><span>🎁</span><div><b>मित्रांना ‘सराव’ बद्दल सांगा</b><small>एकत्र अभ्यास करा, एकमेकांशी रँकिंगमध्ये स्पर्धा करा — अ‍ॅप पूर्णपणे मोफत आहे</small></div></div>
+      <button class="btn primary wide" data-act="refer-share">📲 WhatsApp वर मित्रांना पाठवा</button>
+      <button class="btn link wide" data-act="refer-copy">🔗 लिंक कॉपी करा</button>
+    </section>
     <h3 class="sec">${e.icon} ${e.name} • प्रगती</h3>
     <section class="mini-stats">
       <div><b>🔥 ${mr(store.streak())}</b><span>सलग दिवस</span></div>
@@ -1170,23 +1221,25 @@ function pyqView() {
   </main>
   ${tabbar()}`;
 }
-async function startPyq(id) {
+async function startPyq(id, learn = false) {
   const meta = pyqIndex.find((p) => p.id === id);
   if (!meta) return;
   let paper = pyqCache.get(id);
   if (!paper) {
     try { paper = await (await fetch(meta.file)).json(); pyqCache.set(id, paper); } catch (_) { toast('पेपर उघडता आला नाही'); return; }
+    // सविस्तर स्पष्टीकरणे (असल्यास): pyq/<id>.ex.json = { "<n>": { why, bg, o } }
+    try { const r = await fetch(meta.file.replace(/\.json$/, '.ex.json')); if (r.ok) paper.ex = await r.json(); } catch (_) { /* नाही */ }
   }
   // पेपर सुरू होण्यापूर्वी एक पूर्ण-स्क्रीन जाहिरात (मागील जाहिरात ४५ सेकंदांपूर्वीची असल्यास); टायमर जाहिरातीनंतरच सुरू होतो
   await maybeInterstitial(1, 45);
   const L = ['१', '२', '३', '४'];
   const items = paper.q.map((x) => ({
-    q: { id: `pyq:${id}:${x.n}`, s: x.s, q: `प्र. ${mr(x.n)}. ${x.q}`, o: x.o, img: x.img, e: `योग्य उत्तर: (${L[x.a]}) ${x.o[x.a]}\n(आयोगाची अंतिम उत्तरतालिका)` },
+    q: { id: `pyq:${id}:${x.n}`, s: x.s, q: `प्र. ${mr(x.n)}. ${x.q}`, o: x.o, img: x.img, x: paper.ex?.[x.n], e: `योग्य उत्तर: (${L[x.a]}) ${x.o[x.a]}\n(आयोगाची अंतिम उत्तरतालिका)${paper.ex ? '' : ''}` },
     opts: x.o, correct: x.a,
   }));
   quiz = {
     mode: 'pyq', pyq: id, title: paper.short || paper.title, items, retry: false, ranked: false, exam: exam().id, lvl: 0,
-    mock: { mins: paper.mins, neg: paper.neg, note: paper.note },
+    mock: { mins: paper.mins, neg: paper.neg, note: paper.note }, learn,
     deadline: Date.now() + paper.mins * 60000,
     i: 0, answers: items.map(() => null), removed: items.map(() => []), fifty: 0, left: 0, started: Date.now(),
   };
@@ -1261,6 +1314,7 @@ document.addEventListener('click', async (e) => {
   if (!el) return;
   const act = el.dataset.act;
   if (act === 'modal-yes') return closeModal(true);
+  if (act === 'modal-pick') return closeModal(el.dataset.v);
   if (act === 'modal-get') {
     const g = (id) => modalRoot.querySelector(id)?.value?.trim() ?? '';
     return closeModal({ name: g('#m-name'), dist: g('#m-dist'), pass: modalRoot.querySelector('#m-pass')?.value || '' });
@@ -1273,8 +1327,8 @@ document.addEventListener('click', async (e) => {
   switch (act) {
     case 'mock-info': {
       const m = MOCK[exam().id];
-      const ok = await confirmBox(`${exam().name} सराव पेपर\n\n• १०० प्रश्न, ${mr(m.mins)} मिनिटे\n• ${m.note}\n${m.neg ? `• चुकीच्या उत्तराला ${mr(m.neg)} गुण वजा\n` : ''}• निकाल व स्पष्टीकरण शेवटी`, 'पेपर सुरू करा', 'नंतर');
-      if (ok) startQuiz('mock');
+      const md = await chooseMode(`${exam().name} सराव पेपर`, `१०० प्रश्न • ${mr(m.mins)} मिनिटे${m.neg ? ` • चुकीच्या उत्तराला ${mr(m.neg)} गुण वजा` : ''} • निकाल शेवटी`);
+      if (md === 'exam' || md === 'learn') startQuiz('mock', null, null, md === 'learn');
       return;
     }
     case 'start': return startQuiz(el.dataset.mode, el.dataset.sid, el.dataset.lvl);
@@ -1285,6 +1339,10 @@ document.addEventListener('click', async (e) => {
     case 'fifty': return useFifty();
     case 'exit':
     case 'back': return back();
+    case 'refer-share': return shareInvite();
+    case 'refer-copy':
+      try { await navigator.clipboard.writeText(PLAY_URL); toast('लिंक कॉपी झाली'); } catch (_) { toast(PLAY_URL); }
+      return;
     case 'pyq-scope':
       pyqAll = el.dataset.all === '1';
       render();
@@ -1292,8 +1350,8 @@ document.addEventListener('click', async (e) => {
     case 'pyq-start': {
       const p = pyqIndex.find((x) => x.id === el.dataset.id);
       if (!p) return;
-      const ok = await confirmBox(`${p.title}\n\n• ${mr(p.count)} प्रश्न, ${mr(p.mins)} मिनिटे\n${p.neg ? `• चुकीच्या उत्तराला ${mr(p.neg)} गुण वजा\n` : ''}• उत्तर बदलता येते; निकाल व योग्य उत्तरे शेवटी`, 'पेपर सुरू करा', 'नंतर');
-      if (ok) startPyq(p.id);
+      const m = await chooseMode(esc(p.title), `${mr(p.count)} प्रश्न • ${mr(p.mins)} मिनिटे${p.neg ? ` • चुकीच्या उत्तराला ${mr(p.neg)} गुण वजा` : ''} • निकाल व उत्तरे शेवटी`);
+      if (m === 'exam' || m === 'learn') startPyq(p.id, m === 'learn');
       return;
     }
     case 'exams-scope':
@@ -1311,7 +1369,7 @@ document.addEventListener('click', async (e) => {
       return go('home');
     case 'review': reviewOnlyWrong = false; return go('review');
     case 'filter': reviewOnlyWrong = el.dataset.v === 'wrong'; return render();
-    case 'again': if (quiz.mode === 'pyq') return startPyq(quiz.pyq); return startQuiz(quiz.mode === 'daily' ? 'mixed' : quiz.mode, quiz.sid, quiz.lvl);
+    case 'again': if (quiz.mode === 'pyq') return startPyq(quiz.pyq, quiz.learn); return startQuiz(quiz.mode === 'daily' ? 'mixed' : quiz.mode, quiz.sid, quiz.lvl, quiz.learn);
     case 'save': {
       const on = store.toggleSave(quiz.items[quiz.i].q.id);
       toast(on ? 'प्रश्न जतन केला' : 'जतन यादीतून काढला');
