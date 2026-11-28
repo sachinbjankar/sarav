@@ -10,7 +10,6 @@ import { store, today } from './store.js';
 import { OWL_SVG, greeting, motto, owl, owlLine } from './mascot.js';
 import { createNikal } from './nikal.js';
 import { createTyping } from './typing.js';
-import { createEnergy } from './energy.js';
 import { loadNotices, noticesFor, nextFor, noticesUpdated, noticeById } from './notices.js';
 import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
@@ -68,7 +67,6 @@ let rankExam = '';
 const rankCache = {};     // key → { at, list, mine }
 
 const exam = () => examById[store.get().exam] || EXAMS[0];
-const energy = createEnergy({ backend, user: () => user, go: (v) => go(v), render: () => render(), toast: (m) => toast(m), confirmBox: (...a) => confirmBox(...a), showRewarded, tabbar: () => tabbar() });
 const typing = createTyping({ go: (v) => go(v), render: () => render(), toast: (m) => toast(m), confirmBox: (...a) => confirmBox(...a), tabbar: () => tabbar(), ads: () => maybeInterstitial(1, 45) });
 const nikal = createNikal({ backend, go: (v) => go(v), render: () => render(), toast: (m) => toast(m), confirmBox: (...a) => confirmBox(...a), exam, tabbar: () => tabbar(), user: () => user, noticeById });
 
@@ -230,8 +228,6 @@ const wrongQuestions = (e) => {
 };
 
 // ---------- चाचणी ----------
-// ⚡ ऊर्जा लागणारे प्रकार (आजची प्रश्नमंजुषा, पेपर, PYQ मोफत)
-const usesEnergy = (q) => q && !q.mock && !q.pyq && q.mode !== 'daily';
 function startQuiz(mode, sid, lvl) {
   const e = exam();
   let items;
@@ -270,10 +266,6 @@ function startQuiz(mode, sid, lvl) {
     title = 'मिश्र सराव चाचणी';
   }
   if (!items.length) return startQuiz('mixed');
-  if (mode !== 'daily' && mode !== 'mock' && energy.get() <= 0) {
-    energy.outOfEnergy().then((ok) => { if (ok) startQuiz(mode, sid, lvl); });
-    return;
-  }
   // रँकिंगचे गुण: आजची प्रश्नमंजुषा (पहिल्यांदा), विषय चाचणी व मिश्र चाचणी
   const ranked = (mode === 'daily' && !retry) || (mode === 'level' && !retry) || mode === 'subject' || mode === 'mixed';
   const mock = mode === 'mock' ? MOCK[e.id] : null;
@@ -333,7 +325,6 @@ function answer(choice) {
   const ok = choice === it.correct;
   quiz.answers[quiz.i] = { choice, ok };
   store.record(it.q.id, ok);
-  if (usesEnergy(quiz)) energy.onAnswer(ok);
   if (navigator.vibrate && !ok) navigator.vibrate(60);
   render();
 }
@@ -361,16 +352,6 @@ async function useFifty() {
 }
 
 async function next() {
-  if (quiz.i < quiz.items.length - 1 && usesEnergy(quiz) && energy.get() <= 0) {
-    stopTimer();
-    if (!(await energy.outOfEnergy())) {
-      // ऊर्जा नाही → सोडवलेल्या प्रश्नांपर्यंतच चाचणी पूर्ण
-      const n = quiz.i + 1;
-      quiz.items = quiz.items.slice(0, n); quiz.answers = quiz.answers.slice(0, n); quiz.removed = quiz.removed.slice(0, n);
-      toast('ऊर्जा संपली — चाचणी इथेच पूर्ण केली');
-      finish(); return;
-    }
-  }
   if (quiz.i < quiz.items.length - 1) { quiz.i++; go('quiz'); return; }
   if (quiz.mock) {
     const left = quiz.answers.filter((a) => !a).length;
@@ -594,7 +575,6 @@ function homeView() {
       <div><h1>${APP.name}</h1>${examChip()}</div>
     </div>
     <div class="pills">
-      ${energy.pill()}
       <button class="lvl-pill" data-act="tab" data-v="me" title="तुमचा स्तर">${levelBadge()}</button>
       <div class="streak" title="सलग दिवस">🔥 ${mr(store.streak())}</div>
     </div>
@@ -703,7 +683,6 @@ function quizView(animate = true) {
   <header class="qtop">
     <button class="icon-btn" data-act="exit" aria-label="बाहेर">✕</button>
     <div class="qprog"><i style="width:${p * 100}%"></i></div>
-    ${usesEnergy(quiz) ? `<span class="en-pill q ${energy.get() === 0 ? 'empty' : ''}">⚡ <b data-energy>${mr(energy.get())}</b></span>` : ''}
     <div class="ring ${a ? 'stop' : ''}" style="--p:${a ? 0 : quiz.left / QUIZ.SECONDS_PER_Q}"><span id="timer">${a ? '✓' : mr(quiz.left)}</span></div>
   </header>
   <main class="wrap quiz ${animate ? 'enter' : ''}">
@@ -724,7 +703,7 @@ function quizView(animate = true) {
     </div>
     ${a ? `
       <div class="explain ${a.ok ? 'ok' : 'no'}">
-        <div class="ex-head">${owl(a.ok ? 'correct' : 'wrong')}<b>${a.ok ? '✅ बरोबर!' : a.choice === -1 ? '⏰ वेळ संपली' : '❌ चूक'}</b>${usesEnergy(quiz) ? `<span class="en-chip ${a.ok ? 'up' : 'down'}">${a.ok ? '+१ ⚡' : '−१ ⚡'}</span>` : ''}</div>
+        <div class="ex-head">${owl(a.ok ? 'correct' : 'wrong')}<b>${a.ok ? '✅ बरोबर!' : a.choice === -1 ? '⏰ वेळ संपली' : '❌ चूक'}</b></div>
         <p>${esc(it.q.e)}</p>
       </div>
       <div class="qactions">
@@ -968,7 +947,6 @@ function meView() {
   <main class="wrap">
     ${head}
     ${(() => { const u = userLevel(); return `<section class="lvl-card"><span class="lv-ring big" style="--p:${u.cur / u.need}"><b>${mr(u.L)}</b></span><div class="grow"><b>स्तर ${mr(u.L)}</b><small>पुढील स्तरासाठी ${mr(u.need - u.cur)} XP बाकी • एकूण ${mr(store.get().xp || 0)} XP</small><i class="bar" style="--c:var(--saffron)"><i style="width:${(u.cur / u.need) * 100}%"></i></i></div></section>`; })()}
-    ${energy.meCard()}
     <h3 class="sec">${e.icon} ${e.name} • प्रगती</h3>
     <section class="mini-stats">
       <div><b>🔥 ${mr(store.streak())}</b><span>सलग दिवस</span></div>
@@ -1267,7 +1245,7 @@ function render(keepAnim = false) {
     pick: pickView, home: homeView, path: pathView, quiz: () => quizView(!keepAnim), result: resultView, review: reviewView,
     saved: savedView, rank: rankView, me: meView, auth: authView, exams: examsView, pyq: pyqView,
     nikal: nikal.listView, 'nikal-entry': nikal.entryView, 'nikal-result': nikal.resultView,
-    energy: energy.pageView, typing: typing.listView, 'typing-run': typing.runView, 'typing-result': typing.resultView,
+    typing: typing.listView, 'typing-run': typing.runView, 'typing-result': typing.resultView,
   };
   app.innerHTML = (views[view] || homeView)();
   app.dataset.view = view;
@@ -1291,7 +1269,6 @@ document.addEventListener('click', async (e) => {
   if (el.classList.contains('disabled')) return;
   if (act.startsWith('nk-') && await nikal.click(act, el)) return;
   if (act.startsWith('ty-') && await typing.click(act, el)) return;
-  if (act.startsWith('en-') && await energy.click(act, el)) return;
 
   switch (act) {
     case 'mock-info': {
@@ -1389,7 +1366,6 @@ const minSplash = new Promise((r) => setTimeout(r, 1800));
 Promise.all([loadBank(), minSplash]).then(() => {
   booted = true;
   loadNotices(() => { if (view === 'home' || view === 'exams' || view === 'nikal') render(); });
-  energy.refreshRefs();
   typing.loadIndex().then(() => { if (view === 'home') render(); });
   loadPyqIndex().then(() => { if (view === 'home' || view === 'pyq') render(); });
   nikal.loadIndex().then(() => { if (view === 'home' || view === 'nikal') render(); });

@@ -2,7 +2,6 @@
 // माहितीची रचना (नियम: firestore.rules):
 //   players/{uid}  सार्वजनिक: { name, dist, tot, tests, last, lastExam, t_<exam>, w<week>_<exam> }  ← रँकिंगसाठी
 //   nikal/{exam}/entries/{uid}  { score, at }                                             ← निकालापूर्वी निकाल
-//   refs/{uid}  { code, at }  ← मित्राच्या आमंत्रण कोडची नोंद (प्रत्येक खात्यासाठी एकदाच)
 //   users/{uid}    खासगी:     { progress: {...}, updatedAt }                                       ← फक्त त्या व्यक्तीला दिसते
 import { initializeApp } from 'firebase/app';
 import {
@@ -87,16 +86,6 @@ export const backend = {
   },
 
   // ---- निकालापूर्वी निकाल: एका परीक्षेसाठी प्रति वापरकर्ता एक नोंद ----
-  async referClaim(code) {
-    const u = auth.currentUser; if (!u) throw Object.assign(new Error('auth-required'), { code: 'auth-required' });
-    const ref = doc(db, 'refs', u.uid);
-    if ((await getDoc(ref)).exists()) throw Object.assign(new Error('already'), { code: 'already' });
-    await setDoc(ref, { code, at: serverTimestamp() });
-  },
-  async referCount(code) {
-    const snap = await getCountFromServer(query(collection(db, 'refs'), where('code', '==', code)));
-    return snap.data().count;
-  },
   async nikalSubmit(examId, _entryId, score) {
     const u = auth.currentUser; if (!u) throw Object.assign(new Error('auth-required'), { code: 'auth-required' });
     await setDoc(doc(db, 'nikal', examId, 'entries', u.uid), { score, at: serverTimestamp() });

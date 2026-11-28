@@ -38,13 +38,3 @@ export const firebaseConfig = {
 
 // रँकिंग: प्रत्येक बरोबर उत्तराला किती गुण
 export const POINTS_PER_CORRECT = 10;
-
-// ⚡ ऊर्जा व आमंत्रण
-export const ENERGY = {
-  MAX: 25,            // कमाल ऊर्जा (आपोआप भरणे येथपर्यंतच)
-  BANK_MAX: 250,      // बोनस (आमंत्रण) सह कमाल
-  REFILL_MIN: 30,     // दर किती मिनिटांनी +१
-  ADS_PER_DAY: 5,     // जाहिरात पाहून +५ — दिवसाला किती वेळा
-  REFER_BONUS: 25,    // आमंत्रण: दोघांनाही
-  PLAY_URL: 'https://play.google.com/store/apps/details?id=in.sachivapps.sarav',
-};
