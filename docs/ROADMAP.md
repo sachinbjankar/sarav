@@ -48,3 +48,8 @@ Closed testing पूर्ण होऊन Production मंजूर झाल
 - Telegram/WhatsApp channel, YouTube Shorts वर तेच रील.
 - Production launch नंतर: Instagram boost (₹150–200/दिवस चाचणी), Google App campaigns.
 - प्रत्येक मोठ्या परीक्षेनंतर “निकालापूर्वी निकाल” ची जोरदार जाहिरात (WhatsApp/Telegram गट).
+
+## ⌨️ टायपिंग सराव (next branch)
+- 318 GCC-TBC गती उतारे (मराठी 30/40, इंग्रजी 30/40/50; 2018–2022) — public/typing/*.json
+- मराठी उतारे OCR ने तयार (content/typing/ स्क्रिप्ट्स); विद्यार्थ्यांनी चूक कळवल्यास दुरुस्त करा
+- पुढे: टायपिंग स्ट्रीक, सर्वोत्तम गती लीडरबोर्ड, मराठी इनस्क्रिप्ट कीबोर्ड लेआउट मार्गदर्शक

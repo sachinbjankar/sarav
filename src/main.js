@@ -9,6 +9,7 @@ import { SUBJECTS, EXAMS, QUESTIONS, loadBank, full } from './questions.js';
 import { store, today } from './store.js';
 import { OWL_SVG, greeting, motto, owl, owlLine } from './mascot.js';
 import { createNikal } from './nikal.js';
+import { createTyping } from './typing.js';
 import { loadNotices, noticesFor, nextFor, noticesUpdated, noticeById } from './notices.js';
 import { initAds, showBanner, hideBanner, maybeInterstitial, showRewarded } from './ads.js';
 import { QUIZ, APP, POINTS_PER_CORRECT } from './config.js';
@@ -66,6 +67,7 @@ let rankExam = '';
 const rankCache = {};     // key → { at, list, mine }
 
 const exam = () => examById[store.get().exam] || EXAMS[0];
+const typing = createTyping({ go: (v) => go(v), render: () => render(), toast: (m) => toast(m), confirmBox: (...a) => confirmBox(...a), tabbar: () => tabbar(), ads: () => maybeInterstitial(1, 45) });
 const nikal = createNikal({ backend, go: (v) => go(v), render: () => render(), toast: (m) => toast(m), confirmBox: (...a) => confirmBox(...a), exam, tabbar: () => tabbar(), user: () => user, noticeById });
 
 // ---------- विषय व प्रश्नसंच ----------
@@ -463,7 +465,7 @@ backend.onAuth(async (u) => {
 // ---------- नेव्हिगेशन ----------
 function go(v) {
   view = v;
-  if (v === 'quiz' || v === 'pick' || v === 'auth') hideBanner(); else showBanner();
+  if (v === 'quiz' || v === 'pick' || v === 'auth' || v === 'typing-run') hideBanner(); else showBanner();
   render();
   window.scrollTo(0, 0);
   if (v === 'quiz') startTimer();
@@ -478,6 +480,7 @@ async function back() {
   else if (view === 'result' && quiz?.mode === 'level') { pathSid = quiz.sid; quiz = null; go('path'); scrollToCurrent(); }
   else if (view === 'auth') go('me');
   else if (nikal.backTarget(view)) go(nikal.backTarget(view));
+  else if (typing.isTyping(view)) { const t = await typing.backTarget(view); if (t) go(t); }
   else if (view === 'pick' && !store.get().exam) {
     /* पहिल्यांदा परीक्षा निवडल्याशिवाय पुढे नाही */
   } else if (view !== 'home') go('home');
@@ -615,6 +618,7 @@ function homeView() {
     <button class="mock-strip" data-act="tab" data-v="pyq">
       <span class="ex-ico">📜</span><span class="grow"><b>मागील प्रश्नपत्रिका</b><small>${pyqFor(e.id).length ? `${mr(pyqFor(e.id).length)} पेपर • खऱ्या परीक्षेसारखी वेळ व गुणपद्धती` : 'MPSC चे खरे पेपर • परीक्षा मोडमध्ये सोडवा'}</small></span><span class="arrow">›</span>
     </button>
+    ${typing.homeCard()}
 
     <h3 class="sec">${e.name} • विषयानुसार सराव</h3>
     <section class="subjects">
@@ -1241,6 +1245,7 @@ function render(keepAnim = false) {
     pick: pickView, home: homeView, path: pathView, quiz: () => quizView(!keepAnim), result: resultView, review: reviewView,
     saved: savedView, rank: rankView, me: meView, auth: authView, exams: examsView, pyq: pyqView,
     nikal: nikal.listView, 'nikal-entry': nikal.entryView, 'nikal-result': nikal.resultView,
+    typing: typing.listView, 'typing-run': typing.runView, 'typing-result': typing.resultView,
   };
   app.innerHTML = (views[view] || homeView)();
   app.dataset.view = view;
@@ -1263,6 +1268,7 @@ document.addEventListener('click', async (e) => {
   if (act === 'modal-no') { if (e.target === el) closeModal(false); return; }
   if (el.classList.contains('disabled')) return;
   if (act.startsWith('nk-') && await nikal.click(act, el)) return;
+  if (act.startsWith('ty-') && await typing.click(act, el)) return;
 
   switch (act) {
     case 'mock-info': {
@@ -1360,6 +1366,7 @@ const minSplash = new Promise((r) => setTimeout(r, 1800));
 Promise.all([loadBank(), minSplash]).then(() => {
   booted = true;
   loadNotices(() => { if (view === 'home' || view === 'exams' || view === 'nikal') render(); });
+  typing.loadIndex().then(() => { if (view === 'home') render(); });
   loadPyqIndex().then(() => { if (view === 'home' || view === 'pyq') render(); });
   nikal.loadIndex().then(() => { if (view === 'home' || view === 'nikal') render(); });
   byId = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
