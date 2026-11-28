@@ -22,7 +22,7 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
 
   const draftKey = (id) => `sarav.nikal.${id}`;
   const loadDraft = (id) => { try { return JSON.parse(localStorage.getItem(draftKey(id))) || null; } catch (_) { return null; } };
-  const saveDraft = () => { try { localStorage.setItem(draftKey(cur.meta.id), JSON.stringify({ series: cur.series, ans: cur.ans, submitted: cur.submitted || false })); } catch (_) { /* ignore */ } };
+  const saveDraft = () => { try { localStorage.setItem(draftKey(cur.meta.id), JSON.stringify({ series: cur.series, ans: cur.ans, submitted: cur.submitted || false, info: cur.info })); } catch (_) { /* ignore */ } };
 
   // वेळापत्रक: अ‍ॅपमधील प्रत, मग GitHub वरील ताजी प्रत (नवीन पेपर अ‍ॅप अपडेटशिवाय)
   async function loadIndex() {
@@ -144,7 +144,7 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
     let data;
     try { data = await (await fetch(fileUrl(meta))).json(); } catch (_) { return toast('माहिती उघडता आली नाही'); }
     const d = loadDraft(id);
-    cur = { meta, data, series: (d?.series && data.series[d.series]) ? d.series : Object.keys(data.series)[0], ans: d?.ans || Array(data.count).fill(null), showQ: false, qs: null, submitted: d?.submitted };
+    cur = { meta, data, series: (d?.series && data.series[d.series]) ? d.series : Object.keys(data.series)[0], ans: d?.ans || Array(data.count).fill(null), showQ: false, qs: null, submitted: d?.submitted, info: d?.info || { name: user()?.name || '', seat: '' } };
     if (cur.submitted) return showResult();
     go('nikal-entry');
   }
@@ -192,8 +192,13 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
     if (m) m.innerHTML = r.bad ? `⚠️ ${mr(r.bad)} चुकीचे अंक (५–९) — फक्त ०–४ वापरा` : r.extra ? `⚠️ ${mr(r.extra)} अंक जास्त आहेत — फक्त पहिले ${mr(cur.data.count)} धरले` : `✅ ${mr(r.typed)}/${mr(cur.data.count)} प्रश्न भरले`;
     const bar = document.querySelector('.nk-bar b'); if (bar) bar.textContent = mr(r.ans.filter((a) => a !== null).length);
   }
-  document.addEventListener('input', (e) => { if (e.target?.id === 'nk-type' && cur) onType(e.target.value); });
+  document.addEventListener('input', (e) => {
+    if (!cur) return;
+    if (e.target?.id === 'nk-type') onType(e.target.value);
+    else if (e.target?.id === 'nk-name' || e.target?.id === 'nk-seat') { cur.info = { ...cur.info, [e.target.id === 'nk-name' ? 'name' : 'seat']: e.target.value.trim() }; saveDraft(); }
+  });
   let mode = 'tap';
+  let filter = 'all';
 
   function entryView() {
     const { meta, data, ans, series } = cur;
@@ -221,6 +226,11 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
           ${['A', 'B', 'C', 'D'].map((s) => `<button class="nk-chip ${s === series ? 'on' : ''} ${data.series[s] ? '' : 'disabled'}" data-act="nk-series" data-s="${s}">${s}</button>`).join('')}
         </div>
         ${Object.keys(data.series).length < 4 ? '<small class="muted">या पेपरसाठी सध्या फक्त संच ' + Object.keys(data.series).join(', ') + ' उपलब्ध</small>' : ''}
+        <div class="nk-info">
+          <label>नाव <input id="nk-name" type="text" maxlength="40" placeholder="उमेदवाराचे नाव (ऐच्छिक)" value="${esc(cur.info?.name || '')}"></label>
+          <label>बैठक क्रमांक <input id="nk-seat" type="text" inputmode="text" maxlength="20" placeholder="Seat No. (ऐच्छिक)" value="${esc(cur.info?.seat || '')}"></label>
+          <small class="muted">🔒 ही माहिती फक्त तुमच्या गुणपत्रकावर दिसते; फोनवरच राहते.</small>
+        </div>
         <div class="nk-modes">
           <button class="${mode === 'tap' ? 'on' : ''}" data-act="nk-mode" data-m="tap">👆 टॅप करा</button>
           <button class="${mode === 'type' ? 'on' : ''}" data-act="nk-mode" data-m="type">⌨️ झटपट टाइप</button>
@@ -248,16 +258,16 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
   function score() {
     const { data, ans, series } = cur;
     const key = data.series[series].key;
-    let s = 0, right = 0, wrong = 0, blank = 0, max = 0; const wrongList = [];
+    let s = 0, right = 0, wrong = 0, blank = 0, max = 0; const wrongList = [], rows = [];
     key.forEach((k, i) => {
-      if (k === null) return;
+      if (k === null) { rows.push({ n: i + 1, a: ans[i], k: null, r: 'cx' }); return; }
       max += data.marks;
       const a = ans[i];
-      if (a === null || a === -1) blank++;
-      else if (a === k) { right++; s += data.marks; }
-      else { wrong++; s -= data.marks * data.neg; wrongList.push({ n: i + 1, a, k }); }
+      if (a === null || a === -1) { blank++; rows.push({ n: i + 1, a, k, r: 'sk' }); }
+      else if (a === k) { right++; s += data.marks; rows.push({ n: i + 1, a, k, r: 'ok' }); }
+      else { wrong++; s -= data.marks * data.neg; wrongList.push({ n: i + 1, a, k }); rows.push({ n: i + 1, a, k, r: 'bad' }); }
     });
-    return { score: Math.round(s * 100) / 100, max, right, wrong, blank, wrongList };
+    return { score: Math.round(s * 100) / 100, max, right, wrong, blank, wrongList, rows, gross: right * data.marks, minus: wrong * data.marks * data.neg };
   }
 
   async function submit() {
@@ -276,6 +286,7 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
   }
 
   async function showResult(save = false) {
+    filter = 'all';
     result = { ...score(), stats: null };
     go('nikal-result');
     try {
@@ -305,23 +316,46 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
         ${st.demo ? '<small class="muted">ॲप सर्वांसाठी सुरू झाल्यावर येथे खऱ्या विद्यार्थ्यांमधील रँक दिसेल.</small>' : ''}
       </div>`;
     }
+    const info = cur.info || {};
+    const fl = filter;
+    const shown = r.rows.filter((x) => fl === 'all' || x.r === fl);
+    const cell = (x) => `<tr class="${x.r}"><td>${mr(x.n)}</td><td>${x.a === null || x.a === undefined ? '—' : x.a === -1 ? 'सोडला' : `(${OPT[x.a]})`}</td><td>${x.k === null ? 'रद्द' : `(${OPT[x.k]})`}</td><td>${{ ok: '✔', bad: '✘', sk: '–', cx: '—' }[x.r]}</td></tr>`;
+    const half = Math.ceil(shown.length / 2);
+    const tbl = (list) => `<table class="ms-tbl"><thead><tr><th>प्र.क्र.</th><th>तुमचे उत्तर</th><th>योग्य उत्तर</th><th>निकाल</th></tr></thead><tbody>${list.map(cell).join('')}</tbody></table>`;
+    const today = new Date();
     return `
-    <header class="top slim"><button class="icon-btn" data-act="back">‹</button><h1>🏆 तुमचा अंदाजित निकाल</h1></header>
+    <header class="top slim"><button class="icon-btn" data-act="back">‹</button><h1>🏆 अंदाजित गुणपत्रक</h1></header>
     <main class="wrap">
-      <section class="nk-score">
-        <small>${esc(meta.short)} • संच ${esc(cur.series)}</small>
-        <div class="nk-big"><b>${fmt(r.score)}</b><span>/ ${mr(r.max)} गुण</span></div>
-        <div class="nk-split"><span class="ok">✅ ${mr(r.right)} बरोबर</span><span class="bad">❌ ${mr(r.wrong)} चूक</span><span>⚪ ${mr(r.blank)} सोडले</span></div>
-        <small class="muted">${data.status === 'final' ? 'आयोगाच्या अंतिम उत्तरतालिकेनुसार' : 'तात्पुरत्या उत्तरतालिकेनुसार — अंतिम तालिका आल्यावर गुण आपोआप बदलतील'} • चुकीला ${fmt(data.marks * data.neg)} गुण वजा</small>
+      <section class="ms">
+        <div class="ms-head">
+          <div class="ms-logo">स</div>
+          <div><b>निकालापूर्वी निकाल</b><small>अंदाजित उत्तरपत्रिका व गुणपत्रक</small></div>
+        </div>
+        <div class="ms-exam">${esc(meta.title)}</div>
+        <table class="ms-info">
+          <tr><th>उमेदवाराचे नाव</th><td>${esc(info.name) || '—'}</td></tr>
+          <tr><th>बैठक क्रमांक</th><td>${esc(info.seat) || '—'}</td></tr>
+          <tr><th>प्रश्नपत्रिका संच</th><td>${esc(cur.series)}</td></tr>
+          <tr><th>उत्तरतालिका</th><td>${data.status === 'final' ? 'आयोगाची अंतिम' : 'तात्पुरती'}</td></tr>
+        </table>
+        <div class="ms-total"><span>एकूण गुण</span><b>${fmt(r.score)}</b><span>/ ${mr(r.max)}</span></div>
+        <table class="ms-sum">
+          <tr><th>बरोबर</th><th>चूक</th><th>सोडलेले</th><th>रद्द</th></tr>
+          <tr><td class="ok">${mr(r.right)}</td><td class="bad">${mr(r.wrong)}</td><td>${mr(r.blank)}</td><td>${mr(r.rows.filter((x) => x.r === 'cx').length)}</td></tr>
+          <tr><th colspan="2">मिळालेले गुण (+)</th><th colspan="2">ऋण गुण (−)</th></tr>
+          <tr><td colspan="2" class="ok">${fmt(r.gross)}</td><td colspan="2" class="bad">${fmt(r.minus)}</td></tr>
+        </table>
+        <p class="ms-note">प्रत्येक बरोबर उत्तरास ${fmt(data.marks)} गुण • चुकीच्या उत्तरास ${fmt(data.marks * data.neg)} गुण वजा • रद्द प्रश्नांचे गुण धरलेले नाहीत</p>
       </section>
       ${rankBox}
+      <h3 class="sec">📋 प्रश्ननिहाय उत्तरपत्रिका</h3>
+      <div class="ms-filter">${[['all', 'सर्व', r.rows.length], ['ok', '✔ बरोबर', r.right], ['bad', '✘ चूक', r.wrong], ['sk', 'सोडलेले', r.blank]].map(([k, l, c]) => `<button class="${fl === k ? 'on' : ''}" data-act="nk-filter" data-f="${k}">${l} <small>${mr(c)}</small></button>`).join('')}</div>
+      <div class="ms-cols">${shown.length > 12 ? tbl(shown.slice(0, half)) + tbl(shown.slice(half)) : tbl(shown)}</div>
       <div class="row2">
         <button class="btn ghost" data-act="nk-edit">✏️ उत्तरे बदला</button>
         <button class="btn primary" data-act="nk-share">📤 मित्रांना पाठवा</button>
       </div>
-      ${r.wrongList.length ? `<h3 class="sec">❌ चुकलेले प्रश्न (${mr(r.wrongList.length)})</h3>
-        <div class="nk-wrong">${r.wrongList.map((w) => `<span>प्र. ${mr(w.n)}: तुमचे (${OPT[w.a]}) → योग्य <b>(${OPT[w.k]})</b></span>`).join('')}</div>` : ''}
-      <p class="muted small n-disc">हा फक्त अंदाज आहे. रँक ‘सराव’ वापरणाऱ्या विद्यार्थ्यांमधील आहे; अधिकृत निकाल व कट-ऑफ आयोगच जाहीर करेल.</p>
+      <p class="muted small n-disc">दिनांक: ${mr(today.getDate())}/${mr(today.getMonth() + 1)}/${mr(today.getFullYear())} • हे गुणपत्रक अंदाजित आहे — विद्यार्थ्याने भरलेल्या उत्तरांवर आधारित. रँक ‘सराव’ वापरणाऱ्या विद्यार्थ्यांमधील आहे; अधिकृत निकाल व कट-ऑफ आयोगच जाहीर करेल.</p>
     </main>${tabbar()}`;
   }
 
@@ -346,6 +380,7 @@ export function createNikal({ backend, go, render, toast, confirmBox, exam, tabb
       case 'nk-edit': cur.submitted = false; saveDraft(); go('nikal-entry'); return true;
       case 'nk-share': await share(); return true;
       case 'nk-tell': await tell(el.dataset.id); return true;
+      case 'nk-filter': filter = el.dataset.f; render(); return true;
       case 'nk-mode':
         if (el.dataset.m === 'scan') { toast('📷 OMR प्रत स्कॅन करण्याची सुविधा लवकरच येत आहे'); return true; }
         mode = el.dataset.m; render(); return true;
